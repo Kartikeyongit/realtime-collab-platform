@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+// prisma imported lazily
 
 export async function GET(
   request: Request,
@@ -10,7 +12,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const comments = await prisma.comment.findMany({
+  const comments = const { prisma } = await import("@/lib/prisma"); await prisma.comment.findMany({
     where: { documentId: params.documentId, parentId: null },
     include: {
       user: { select: { id: true, name: true, image: true } },
@@ -34,7 +36,7 @@ export async function POST(
 
     if (!content?.trim()) return NextResponse.json({ error: 'Content required' }, { status: 400 });
 
-    const comment = await prisma.comment.create({
+    const comment = const { prisma } = await import("@/lib/prisma"); await prisma.comment.create({
       data: {
         content: content.trim(),
         documentId: params.documentId,

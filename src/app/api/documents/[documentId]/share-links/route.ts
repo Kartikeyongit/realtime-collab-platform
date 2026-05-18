@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+// prisma imported lazily
 import crypto from 'crypto';
 
 export async function GET(
@@ -11,7 +13,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const links = await prisma.shareLink.findMany({
+  const links = const { prisma } = await import("@/lib/prisma"); await prisma.shareLink.findMany({
     where: { documentId: params.documentId },
     orderBy: { createdAt: 'desc' },
   });
@@ -29,7 +31,7 @@ export async function POST(
   const body = await request.json();
   const token = crypto.randomBytes(16).toString('hex');
 
-  const link = await prisma.shareLink.create({
+  const link = const { prisma } = await import("@/lib/prisma"); await prisma.shareLink.create({
     data: {
       documentId: params.documentId,
       token,

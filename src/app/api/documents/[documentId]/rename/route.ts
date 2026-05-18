@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+// prisma imported lazily
 
 export async function PATCH(
   request: Request,
@@ -30,7 +32,7 @@ export async function PATCH(
     }
 
     // Check if document exists and user has access
-    const document = await prisma.document.findUnique({
+    const document = const { prisma } = await import("@/lib/prisma"); await prisma.document.findUnique({
       where: { id: params.documentId },
       select: { 
         id: true, 
@@ -54,7 +56,7 @@ export async function PATCH(
     }
 
     // Update the document title
-    const updatedDocument = await prisma.document.update({
+    const updatedDocument = const { prisma } = await import("@/lib/prisma"); await prisma.document.update({
       where: { id: params.documentId },
       data: { title: title.trim() },
       select: {

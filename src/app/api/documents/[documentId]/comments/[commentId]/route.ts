@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+// prisma imported lazily
 
 export async function PATCH(
   request: Request,
@@ -12,7 +14,7 @@ export async function PATCH(
 
   const { resolved, content } = await request.json();
 
-  const comment = await prisma.comment.update({
+  const comment = const { prisma } = await import("@/lib/prisma"); await prisma.comment.update({
     where: { id: params.commentId },
     data: {
       ...(resolved !== undefined && { resolved }),
@@ -31,6 +33,6 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  await prisma.comment.delete({ where: { id: params.commentId } });
+  const { prisma } = await import("@/lib/prisma"); await prisma.comment.delete({ where: { id: params.commentId } });
   return NextResponse.json({ success: true });
 }

@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+// prisma imported lazily
 
 export async function DELETE(
   request: Request,
@@ -11,7 +13,7 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const document = await prisma.document.findUnique({
+    const document = const { prisma } = await import("@/lib/prisma"); await prisma.document.findUnique({
       where: { id: params.documentId },
       select: { ownerId: true },
     });
@@ -20,12 +22,12 @@ export async function DELETE(
     if (document.ownerId !== session.user.id) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
     // Delete versions and comments first
-    await prisma.documentVersion.deleteMany({ where: { documentId: params.documentId } });
-    await prisma.comment.deleteMany({ where: { documentId: params.documentId } });
-    await prisma.documentCollaborator.deleteMany({ where: { documentId: params.documentId } });
+    const { prisma } = await import("@/lib/prisma"); await prisma.documentVersion.deleteMany({ where: { documentId: params.documentId } });
+    const { prisma } = await import("@/lib/prisma"); await prisma.comment.deleteMany({ where: { documentId: params.documentId } });
+    const { prisma } = await import("@/lib/prisma"); await prisma.documentCollaborator.deleteMany({ where: { documentId: params.documentId } });
     
     // Then delete the document
-    await prisma.document.delete({ where: { id: params.documentId } });
+    const { prisma } = await import("@/lib/prisma"); await prisma.document.delete({ where: { id: params.documentId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

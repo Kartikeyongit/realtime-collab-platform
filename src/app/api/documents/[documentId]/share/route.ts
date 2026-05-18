@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+// prisma imported lazily
 
 export async function POST(
   request: Request,
@@ -16,7 +18,7 @@ export async function POST(
     const { email, role = 'editor' } = await request.json();
 
     // Check if document exists and user is owner
-    const document = await prisma.document.findUnique({
+    const document = const { prisma } = await import("@/lib/prisma"); await prisma.document.findUnique({
       where: { id: params.documentId },
       select: { ownerId: true },
     });
@@ -30,7 +32,7 @@ export async function POST(
     }
 
     // Find user by email
-    const user = await prisma.user.findUnique({
+    const user = const { prisma } = await import("@/lib/prisma"); await prisma.user.findUnique({
       where: { email },
     });
 
@@ -39,7 +41,7 @@ export async function POST(
     }
 
     // Add collaborator
-    const collaborator = await prisma.documentCollaborator.create({
+    const collaborator = const { prisma } = await import("@/lib/prisma"); await prisma.documentCollaborator.create({
       data: {
         documentId: params.documentId,
         userId: user.id,
@@ -73,7 +75,7 @@ export async function DELETE(
 
     const { userId } = await request.json();
 
-    await prisma.documentCollaborator.deleteMany({
+    const { prisma } = await import("@/lib/prisma"); await prisma.documentCollaborator.deleteMany({
       where: {
         documentId: params.documentId,
         userId,
