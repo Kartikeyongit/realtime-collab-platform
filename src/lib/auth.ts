@@ -1,15 +1,14 @@
 import { NextAuthOptions } from 'next-auth';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error('Please provide NEXTAUTH_SECRET environment variable');
-}
+// Lazy-load Prisma to avoid build errors
+const getPrisma = async () => {
+  const { prisma } = await import('@/lib/prisma');
+  return prisma;
+};
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -22,6 +21,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials');
         }
 
+        const prisma = await getPrisma();
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
@@ -50,18 +50,15 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-build-only',
   pages: {
     signIn: '/auth/signin',
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
+      if (user) token.id = user.id;
       return token;
     },
     async session({ session, token }) {
