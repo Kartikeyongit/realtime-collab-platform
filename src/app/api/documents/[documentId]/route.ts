@@ -17,23 +17,13 @@ export async function GET(
     include: {
       owner: { select: { id: true, name: true, image: true } },
       collaborators: { include: { user: { select: { id: true, name: true, image: true } } } },
-      comments: {
-        include: { user: { select: { id: true, name: true, image: true } }, replies: { include: { user: { select: { id: true, name: true, image: true } } } } },
-        where: { parentId: null },
-        orderBy: { createdAt: 'asc' },
-      },
     },
   });
 
   if (!document) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const content = document.content as any;
-  if (typeof content === 'string' || !content?.type) {
-    document.content = { type: 'doc', content: [{ type: 'paragraph' }] };
-  }
-
   const hasAccess = document.ownerId === session.user.id ||
-    (document.collaborators.some(c => c.userId === session.user.id) && !(document as any).trashed);
+    document.collaborators.some(c => c.userId === session.user.id);
 
   if (!hasAccess) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
@@ -48,38 +38,20 @@ export async function PUT(
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { content } = body;
+  const { content, title } = body;
+
   const { prisma } = await import('@/lib/prisma');
 
-  if (content) {
-    const currentDoc = await prisma.document.findUnique({
-      where: { id: params.documentId },
-      select: { content: true },
-    });
+  const updateData: any = {};
+  if (title !== undefined) updateData.title = title;
+  if (content !== undefined) updateData.content = content;
 
-    if (currentDoc?.content && JSON.stringify(content) !== JSON.stringify(currentDoc.content)) {
-      const latestVersion = await prisma.documentVersion.findFirst({
-        where: { documentId: params.documentId },
-        orderBy: { version: 'desc' },
-      });
-
-      await prisma.documentVersion.create({
-        data: {
-          documentId: params.documentId,
-          content: currentDoc.content,
-          version: (latestVersion?.version || 0) + 1,
-          createdBy: session.user.id,
-        },
-      });
-    }
-  }
-
-  const updated = await prisma.document.update({
+  await prisma.document.update({
     where: { id: params.documentId },
-    data: { content },
+    data: updateData,
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(
@@ -90,14 +62,11 @@ export async function DELETE(
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { prisma } = await import('@/lib/prisma');
-  const document = await prisma.document.findUnique({
+
+  await prisma.document.update({
     where: { id: params.documentId },
-    select: { ownerId: true },
+    data: { trashed: true },
   });
 
-  if (!document) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (document.ownerId !== session.user.id) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-
-  await prisma.document.update({ where: { id: params.documentId }, data: { trashed: true } });
   return NextResponse.json({ success: true });
 }
