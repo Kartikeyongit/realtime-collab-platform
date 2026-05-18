@@ -50,7 +50,7 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     const provider = useMemo(() => {
       if (typeof window !== 'undefined' && yDoc && WebsocketProvider) {
         const wsProvider = new WebsocketProvider(
-          'ws://localhost:1234',
+          process.env.NEXT_PUBLIC_YJS_URL || 'ws://localhost:1234',
           `document-${documentId}`,
           yDoc,
           { connect: true, maxBackoffTime: 2500 }
