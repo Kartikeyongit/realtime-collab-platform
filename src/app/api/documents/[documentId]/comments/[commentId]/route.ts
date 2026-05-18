@@ -1,9 +1,8 @@
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// prisma imported lazily
 
 export async function PATCH(
   request: Request,
@@ -13,13 +12,11 @@ export async function PATCH(
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { resolved, content } = await request.json();
+  const { prisma } = await import('@/lib/prisma');
 
-  const comment = const { prisma } = await import("@/lib/prisma"); await prisma.comment.update({
+  const comment = await prisma.comment.update({
     where: { id: params.commentId },
-    data: {
-      ...(resolved !== undefined && { resolved }),
-      ...(content && { content }),
-    },
+    data: { ...(resolved !== undefined && { resolved }), ...(content && { content }) },
     include: { user: { select: { id: true, name: true, image: true } } },
   });
 
@@ -33,6 +30,8 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { prisma } = await import("@/lib/prisma"); await prisma.comment.delete({ where: { id: params.commentId } });
+  const { prisma } = await import('@/lib/prisma');
+  await prisma.comment.delete({ where: { id: params.commentId } });
+
   return NextResponse.json({ success: true });
 }
