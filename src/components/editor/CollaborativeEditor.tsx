@@ -78,18 +78,15 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     }, [yDoc]);
 
     const saveDocument = useCallback(async () => {
-      if (!editorRef.current) return;
-      
-      const content = editorRef.current.getJSON();
+      if (!yDoc) return;
+      const content = yDoc.getXmlFragment('prosemirror').toJSON();
       if (!content?.content || content.content.length === 0) return;
-      
       try {
         await axios.put(`/api/documents/${documentId}`, { content });
-        console.log('Saved directly to database');
       } catch (error) {
         console.error('Save failed:', error);
       }
-    }, [documentId]);
+    }, [documentId, yDoc]);
 
     const debouncedSave = useCallback(() => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -110,6 +107,10 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         Link.configure({ openOnClick: true, HTMLAttributes: { class: 'text-blue-500 underline cursor-pointer' } }),
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
         Highlight.configure({ multicolor: true }),
+        ...(yXmlFragment && provider ? [
+          Collaboration.configure({ document: yDoc, field: 'prosemirror' }),
+          CollaborationCursor.configure({ provider, user: { name: session?.user?.name || 'Anon', color: '#f97316' } }),
+        ] : []),
       ],
       editorProps: {
         attributes: {
