@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
@@ -15,6 +14,9 @@ export async function POST(request: Request) {
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
+
+    // Lazy-load prisma to avoid build-time database connection
+    const { prisma } = await import('@/lib/prisma');
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
 
