@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String                 @id @default(cuid())
+  name           String?
+  email          String?                @unique
+  emailVerified  DateTime?
+  image          String?
+  password       String?
+  accounts       Account[]
+  sessions       Session[]
+  documents      Document[]
+  comments       Comment[]
+  presence       Presence[]
+  collaborations DocumentCollaborator[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id            String                 @id @default(cuid())
+  title         String
+  content       Json?
+  ownerId       String
+  owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  collaborators DocumentCollaborator[]
+  versions      DocumentVersion[]
+  comments      Comment[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  ShareLink     ShareLink[]
+  trashed       Boolean                @default(false)
+}
+
+model DocumentCollaborator {
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String
+  role       String   @default("editor") // editor, viewer
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId])
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  content    Json
+  version    Int
+  createdAt  DateTime @default(now())
+  createdBy  String?
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id         String           @id @default(cuid())
+  content    String           @db.Text
+  documentId String
+  userId     String
+  parentId   String?
+  resolved   Boolean          @default(false)
+  position   Json? // Store position in document
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  document   Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent     Comment?         @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    Comment[]        @relation("CommentReplies")
+  mentions   CommentMention[]
+}
+
+model CommentMention {
+  id        String  @id @default(cuid())
+  commentId String
+  userId    String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+}
+
+model Presence {
+  id         String   @id @default(cuid())
+  userId     String
+  documentId String
+  cursor     Json?
+  lastSeen   DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+}
+
+model ShareLink {
+  id         String    @id @default(cuid())
+  documentId String
+  token      String    @unique
+  password   String?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}

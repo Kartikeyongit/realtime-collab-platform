@@ -1,0 +1,592 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #fdfbf7;
+  --surface: #ffffff;
+  --text: #2d2a26;
+  --text-light: #78716c;
+  --border: #e7e5e4;
+  --accent: #f97316;
+  --accent-light: #fff7ed;
+  --accent-dark: #ea580c;
+  --blue: #3b82f6;
+  --blue-light: #eff6ff;
+  --green: #22c55e;
+  --green-light: #f0fdf4;
+  --red: #ef4444;
+  --red-light: #fef2f2;
+  --purple: #8b5cf6;
+  --purple-light: #f5f3ff;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 2px 8px rgba(249,115,22,0.3);
+}
+
+.btn-primary:hover {
+  background: var(--accent-dark);
+  box-shadow: 0 4px 16px rgba(249,115,22,0.4);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: #fafaf9;
+  border-color: #d6d3d1;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-light);
+}
+
+.btn-ghost:hover {
+  background: #f5f5f4;
+  color: var(--text);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.btn-lg {
+  padding: 14px 28px;
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+.btn-danger {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.btn-danger:hover {
+  background: #fee2e2;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
+}
+
+.input::placeholder {
+  color: #a8a29e;
+}
+
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  border-color: #d6d3d1;
+  box-shadow: var(--shadow);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 20px;
+  letter-spacing: -0.01em;
+}
+
+.badge-orange {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+}
+
+.badge-blue {
+  background: var(--blue-light);
+  color: #1d4ed8;
+}
+
+.badge-green {
+  background: var(--green-light);
+  color: #15803d;
+}
+
+.badge-purple {
+  background: var(--purple-light);
+  color: #6d28d9;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
+.avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 18px;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 220px;
+  z-index: 50;
+  padding: 6px;
+  animation: dropdownIn 0.2s ease;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  letter-spacing: -0.01em;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f4;
+}
+
+.dropdown-item.danger {
+  color: var(--red);
+}
+
+.dropdown-item.danger:hover {
+  background: var(--red-light);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.4s ease;
+}
+
+.animate-slide {
+  animation: slideIn 0.3s ease;
+}
+
+.ProseMirror {
+  outline: none;
+  min-height: 400px;
+  padding: 40px 48px;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #292524;
+}
+
+.ProseMirror h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 32px 0 16px;
+  color: #1c1917;
+  letter-spacing: -0.02em;
+}
+
+.ProseMirror h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 24px 0 12px;
+  color: #292524;
+  letter-spacing: -0.01em;
+}
+
+.ProseMirror h3 {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 20px 0 8px;
+  color: #44403c;
+}
+
+.ProseMirror p {
+  margin: 10px 0;
+}
+
+.ProseMirror ul, .ProseMirror ol {
+  padding-left: 24px;
+  margin: 10px 0;
+}
+
+.ProseMirror li {
+  margin: 4px 0;
+}
+
+.ProseMirror code {
+  background: #fff7ed;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ProseMirror pre {
+  background: #1c1917;
+  color: #fafaf9;
+  padding: 20px 24px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ProseMirror pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 20px;
+  margin: 16px 0;
+  color: #78716c;
+  font-style: italic;
+}
+
+.ProseMirror a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  margin: 16px 0;
+}
+
+.ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+}
+
+.ProseMirror th {
+  background: #fafaf9;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--border);
+}
+
+.ProseMirror td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f5f5f4;
+}
+
+.ProseMirror tr:last-child td {
+  border-bottom: none;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 28px 0;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #d6d3d1;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+}
+
+.ProseMirror mark {
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #92400e;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  
+  .ProseMirror {
+    padding: 16px 20px !important;
+    font-size: 15px !important;
+  }
+  
+  .ProseMirror h1 {
+    font-size: 24px !important;
+  }
+  
+  .ProseMirror h2 {
+    font-size: 20px !important;
+  }
+}
+
+/* Shimmer loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Scale in animation for modals */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Slide up animation for toasts */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Blink cursor animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Pulse glow for buttons */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(249,115,22,0.3); }
+  50% { box-shadow: 0 0 40px rgba(249,115,22,0.5); }
+}
+
+/* Force scrollbar to prevent layout shift */
+html {
+  overflow-y: scroll;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus outline */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Print styles */
+@media print {
+  nav, header, .toolbar, button {
+    display: none !important;
+  }
+  
+  .ProseMirror {
+    padding: 0 !important;
+  }
+}
+
+/* Fix for iOS input zoom */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  
+  .ProseMirror {
+    padding: 16px 20px !important;
+    font-size: 15px !important;
+    min-height: 300px !important;
+  }
+  
+  .ProseMirror h1 {
+    font-size: 24px !important;
+  }
+  
+  .ProseMirror h2 {
+    font-size: 20px !important;
+  }
+  
+  .ProseMirror h3 {
+    font-size: 17px !important;
+  }
+
+  /* Responsive dialogs */
+  [style*="width: 480px"],
+  [style*="width: 440px"],
+  [style*="width: 460px"] {
+    width: calc(100vw - 40px) !important;
+    max-width: 480px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  nav > div {
+    padding: 0 12px !important;
+  }
+  
+  header {
+    padding: 0 12px !important;
+  }
+  
+  .btn span, 
+  .btn .hide-mobile {
+    display: none !important;
+  }
+  
+  .btn-lg {
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+  }
+}
