@@ -6,8 +6,10 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: Request) {
   try {
     const { name, email, password } = await request.json();
+    console.log('Register attempt:', { name, email });
 
     if (!name || !email || !password) {
+      console.log('Missing fields');
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -15,13 +17,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    // Lazy-load prisma to avoid build-time database connection
     const { prisma } = await import('@/lib/prisma');
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
+    console.log('Existing user:', !!existingUser);
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'User already exists' }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -31,9 +33,10 @@ export async function POST(request: Request) {
       select: { id: true, name: true, email: true, createdAt: true },
     });
 
-    return NextResponse.json({ message: 'User created successfully', user }, { status: 201 });
-  } catch (error) {
-    console.error('Registration error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.log('User created:', user.id);
+    return NextResponse.json({ message: 'User created', user }, { status: 201 });
+  } catch (error: any) {
+    console.error('Registration error:', error.message);
+    return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 });
   }
 }
