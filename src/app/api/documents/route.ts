@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -13,26 +15,14 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const title = body.title || 'Untitled Document';
 
-    // Always create with proper ProseMirror JSON format
     const defaultContent = {
       type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'Start typing...' }]
-        }
-      ]
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Start typing...' }] }]
     };
 
     const document = await prisma.document.create({
-      data: {
-        title: title,
-        ownerId: session.user.id,
-        content: defaultContent,
-      },
+      data: { title, ownerId: session.user.id, content: defaultContent },
     });
-
-    console.log('Document created:', document.id, 'with proper JSON content');
 
     return NextResponse.json(document, { status: 201 });
   } catch (error: any) {
