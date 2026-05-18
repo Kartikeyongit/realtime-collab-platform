@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// // using lazy import below
 
 export async function POST(request: Request) {
   try {
@@ -15,18 +14,22 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const title = body.title || 'Untitled Document';
 
-    const defaultContent = {
-      type: 'doc',
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Start typing...' }] }]
-    };
+    const { prisma } = await import('@/lib/prisma');
 
     const document = await prisma.document.create({
-      data: { title, ownerId: session.user.id, content: defaultContent },
+      data: {
+        title,
+        ownerId: session.user.id,
+        content: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Start typing...' }] }]
+        },
+      },
     });
 
     return NextResponse.json(document, { status: 201 });
   } catch (error: any) {
-    console.error('Create error:', error.message);
+    console.error('Create document error:', error.message);
     return NextResponse.json({ error: 'Failed to create document' }, { status: 500 });
   }
 }
@@ -37,6 +40,8 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { prisma } = await import('@/lib/prisma');
 
     const documents = await prisma.document.findMany({
       where: {
@@ -54,7 +59,8 @@ export async function GET() {
     });
 
     return NextResponse.json(documents);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Fetch documents error:', error.message);
     return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
   }
 }
