@@ -188,13 +188,24 @@ export default function DocumentPage() {
             documentId={documentId}
             onResolve={async (id) => { 
               await axios.patch(`/api/documents/${documentId}/comments/${id}`, { resolved: true }); 
-              fetchDocument(); 
+              const updatedComments = (document?.comments || []).map(c => 
+                c.id === id ? { ...c, resolved: true } : c
+              );
+              if (document) setDocument({ ...document, comments: updatedComments });
             }} 
             onDelete={async (id) => { 
               await axios.delete(`/api/documents/${documentId}/comments/${id}`); 
-              fetchDocument(); 
+              const filteredComments = (document?.comments || []).filter(c => c.id !== id);
+              if (document) setDocument({ ...document, comments: filteredComments });
             }}
-            onCommentAdded={fetchDocument}
+            onCommentAdded={(newComment) => {
+              if (document) {
+                setDocument({
+                  ...document,
+                  comments: [newComment, ...(document.comments || [])],
+                });
+              }
+            }}
             addToast={addToast}
           />
         )}
