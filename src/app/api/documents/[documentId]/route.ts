@@ -33,7 +33,8 @@ export async function GET(
     if (!hasAccess) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
     // Ensure content is proper JSON format
-    if (typeof document.content === 'string' || !document.content?.type) {
+    const content = document.content as any;
+    if (typeof content === 'string' || !content?.type) {
       document.content = {
         type: 'doc',
         content: [{ type: 'paragraph' }]

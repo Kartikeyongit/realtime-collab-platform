@@ -9,45 +9,28 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 
 export const getEditorExtensions = (isCollaborative = false) => {
   const extensions = [
     StarterKit.configure({
-      history: isCollaborative ? false : true,
-      codeBlock: false, // We'll add custom code block
+      history: isCollaborative ? false : {},
+      codeBlock: false,
     }),
     Placeholder.configure({
-      placeholder: 'Start typing... or type / for commands',
+      placeholder: 'Start typing...',
     }),
     Underline,
-    Table.configure({
-      resizable: true,
-    }),
+    Table.configure({ resizable: true }),
     TableRow,
     TableCell,
     TableHeader,
-    Image.configure({
-      inline: true,
-      allowBase64: true,
-    }),
+    Image.configure({ inline: true, allowBase64: true }),
     Link.configure({
       openOnClick: true,
-      HTMLAttributes: {
-        class: 'text-blue-500 underline cursor-pointer',
-      },
+      HTMLAttributes: { class: 'text-blue-500 underline cursor-pointer' },
     }),
-    TextAlign.configure({
-      types: ['heading', 'paragraph'],
-    }),
-    Highlight.configure({
-      multicolor: true,
-    }),
-    TaskList,
-    TaskItem.configure({
-      nested: true,
-    }),
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    Highlight.configure({ multicolor: true }),
   ];
 
   return extensions;

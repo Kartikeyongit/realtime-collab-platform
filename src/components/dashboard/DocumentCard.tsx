@@ -69,7 +69,6 @@ export function DocumentCard({ document, viewMode, onDelete, onRename }: Documen
               documentId={document.id}
               initialTitle={document.title}
               onRename={(newTitle) => onRename?.(document.id, newTitle)}
-              className="font-medium text-gray-900"
             />
           </div>
           <div className="flex items-center gap-3 mt-0.5">
@@ -180,7 +179,6 @@ export function DocumentCard({ document, viewMode, onDelete, onRename }: Documen
           documentId={document.id}
           initialTitle={document.title}
           onRename={(newTitle) => onRename?.(document.id, newTitle)}
-          className="font-medium text-gray-900"
         />
       </div>
 

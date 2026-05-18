@@ -12,8 +12,10 @@ export interface Document {
   ownerId: string;
   owner: User;
   collaborators: DocumentCollaborator[];
+  comments: Comment[];
   createdAt: string;
   updatedAt: string;
+  trashed?: boolean;
 }
 
 export interface DocumentCollaborator {

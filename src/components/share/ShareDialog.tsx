@@ -17,7 +17,7 @@ interface ShareDialogProps {
   onClose: () => void;
   documentId: string;
   documentTitle: string;
-  collaborators: Array<{ id: string; user: { name: string; email: string }; role: string }>;
+  collaborators: Array<{ id: string; user: { name?: string | null; email?: string | null }; role: string }>;
   addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -157,7 +157,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                       {link.password ? <Lock size={13} color="#f97316" /> : <Globe size={13} color="#22c55e" />}
                       <span style={{ fontSize: '12px', color: '#78716c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>.../{link.token.substring(0, 8)}</span>
-                      {link.expiresAt && <Clock size={11} color="#ef4444" title="Expires" />}
+                      {link.expiresAt && <span title="Expires"><Clock size={11} color="#ef4444" /></span>}
                     </div>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button onClick={() => copyLink(link.token)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }}>{copied === link.token ? <Check size={13} color="#22c55e" /> : <Copy size={13} />}</button>
