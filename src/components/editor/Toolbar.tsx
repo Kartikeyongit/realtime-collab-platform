@@ -47,10 +47,13 @@ export function Toolbar({ editor }: ToolbarProps) {
     { icon: Quote, action: () => editor.chain().focus().toggleBlockquote().run(), active: () => editor.isActive('blockquote') },
   ];
 
-  const ToolButton = ({ icon: Icon, action, active, onMouseDown }: any) => (
+  const ToolButton = ({ icon: Icon, action, active }: any) => (
     <button
       onClick={action}
-      onMouseDown={onMouseDown}
+      onMouseDown={(e: React.MouseEvent) => {
+        e.preventDefault();
+        action();
+      }}
       style={{
         padding: '6px 8px',
         border: 'none',
@@ -145,20 +148,12 @@ export function Toolbar({ editor }: ToolbarProps) {
 
       <ToolButton 
         icon={Undo} 
-        action={() => {}} 
-        onMouseDown={(e: React.MouseEvent) => {
-          e.preventDefault();
-          editor.commands.undo();
-        }}
+        action={() => editor.commands.undo()} 
         active={() => false} 
       />
       <ToolButton 
         icon={Redo} 
-        action={() => {}} 
-        onMouseDown={(e: React.MouseEvent) => {
-          e.preventDefault();
-          editor.commands.redo();
-        }}
+        action={() => editor.commands.redo()} 
         active={() => false} 
       />
     </div>
