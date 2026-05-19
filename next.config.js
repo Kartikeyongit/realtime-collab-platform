@@ -21,7 +21,6 @@ const nextConfig = {
     'y-websocket',
     'y-protocols',
     'y-prosemirror',
-    'lib0',
   ],
   typescript: {
     ignoreBuildErrors: true,
