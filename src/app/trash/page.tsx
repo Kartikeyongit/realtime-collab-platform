@@ -100,11 +100,13 @@ export default function TrashPage() {
       </div>
 
       {documents.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <Trash2 size={40} color="#d6d3d1" style={{ marginBottom: '12px' }} />
-          <p style={{ fontSize: '15px', color: '#78716c', marginBottom: '4px' }}>Trash is empty</p>
-          <p style={{ fontSize: '13px', color: '#a8a29e' }}>Deleted documents will appear here</p>
+      <div style={{ textAlign: 'center', padding: '60px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+          <Trash2 size={40} color="#d6d3d1" />
         </div>
+        <p style={{ fontSize: '15px', color: '#78716c', marginBottom: '4px' }}>Trash is empty</p>
+        <p style={{ fontSize: '13px', color: '#a8a29e' }}>Deleted documents will appear here</p>
+      </div>
       ) : (
         <div style={{ display: 'grid', gap: '8px' }}>
           {documents.map((doc) => (

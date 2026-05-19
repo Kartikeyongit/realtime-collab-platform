@@ -85,7 +85,7 @@ export function Navigation() {
                         <Trash2 size={15} /> Trash
                       </button>
                       <div className="dropdown-divider" />
-                      <button onClick={() => signOut()} className="dropdown-item danger">
+                      <button onClick={() => signOut({ callbackUrl: '/' })} className="dropdown-item danger">
                         <LogOut size={15} /> Sign out
                       </button>
                     </div>
