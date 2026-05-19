@@ -9,7 +9,6 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
-import { History } from '@tiptap/extension-history';
 import { CustomTable, CustomTableRow, CustomTableCell, CustomTableHeader } from './extensions/tableExtensions';
 import { Toolbar } from './Toolbar';
 import axios from 'axios';
@@ -48,7 +47,6 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         StarterKit,
         Placeholder.configure({ placeholder: 'Start typing...' }),
         Underline,
-        History,
         CustomTable,
         CustomTableRow,
         CustomTableCell,
