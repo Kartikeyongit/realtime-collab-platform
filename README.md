@@ -1,30 +1,18 @@
-<div>
-  <img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" alt="Next.js">
-  <img src="https://img.shields.io/badge/TipTap-Editor-orange" alt="TipTap">
-  <img src="https://img.shields.io/badge/Prisma-ORM-blue" alt="Prisma">
-  <img src="https://img.shields.io/badge/PostgreSQL-Database-green" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/license-MIT-purple" alt="License">
-</div>
+<img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" alt="Next.js">
+<img src="https://img.shields.io/badge/TipTap-Editor-orange" alt="TipTap">
+<img src="https://img.shields.io/badge/Prisma-ORM-blue" alt="Prisma">
+<img src="https://img.shields.io/badge/PostgreSQL-Database-green" alt="PostgreSQL">
+<img src="https://img.shields.io/badge/license-MIT-purple" alt="License">
 
-<br />
-
-<div>
-  <h1>📝 CollabDocs</h1>
-  <p><strong>Real-Time Collaborative Document Editor</strong></p>
-  <p>Create, edit, and collaborate on documents with your team.</p>
-</div>
-
-<br />
+<h1>📝 CollabDocs</h1>
+<p><strong>Real-Time Collaborative Document Editor</strong></p>
+<p>Create, edit, and collaborate on documents with your team.</p>
 
 ## ✨ Live Demo
 
-<div align="center">
-  <a href="https://realtime-collab-platform-pi.vercel.app/">
-    <img src="https://img.shields.io/badge/LIVE_DEMO-Visit_Site-f97316?style=for-the-badge" alt="Live Demo">
-  </a>
-</div>
-
-<br />
+<a href="https://realtime-collab-platform-pi.vercel.app/">
+<img src="https://img.shields.io/badge/LIVE_DEMO-Visit_Site-f97316?style=for-the-badge" alt="Live Demo">
+</a>
 
 ### 🔑 Demo Credentials
 
