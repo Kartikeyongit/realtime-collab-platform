@@ -1,8 +1,10 @@
+<div>
 <img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" alt="Next.js">
 <img src="https://img.shields.io/badge/TipTap-Editor-orange" alt="TipTap">
 <img src="https://img.shields.io/badge/Prisma-ORM-blue" alt="Prisma">
 <img src="https://img.shields.io/badge/PostgreSQL-Database-green" alt="PostgreSQL">
 <img src="https://img.shields.io/badge/license-MIT-purple" alt="License">
+</div>
 
 <h1>📝 CollabDocs</h1>
 <p><strong>Real-Time Collaborative Document Editor</strong></p>
@@ -19,8 +21,6 @@
 | Email | Password |
 |-------|----------|
 | `test@example.com` | `password123` |
-
-<br />
 
 ## 🚀 Features
 
@@ -110,8 +110,6 @@ Download documents in multiple formats:
 | `Ctrl + K` | Add link |
 | `?` | Show all shortcuts |
 
-<br />
-
 ## 🛠️ Tech Stack
 
 | Category | Technology |
@@ -125,11 +123,9 @@ Download documents in multiple formats:
 | **Icons** | [Lucide React](https://lucide.dev/) |
 | **Deployment** | [Vercel](https://vercel.com/) |
 
-<br />
-
 ## 📦 Project Structure
 
-```text
+```
 realtime-collab-platform/
 ├── prisma/                         # Database schema & migrations
 │   ├── schema.prisma               # Prisma schema
@@ -160,6 +156,7 @@ realtime-collab-platform/
 ├── next.config.js                  # Next.js configuration
 ├── tailwind.config.ts              # Tailwind CSS configuration
 └── package.json                    # Dependencies and scripts
+```
 
 ## 🚀 Getting Started
 
@@ -169,26 +166,24 @@ realtime-collab-platform/
 - npm or yarn
 - PostgreSQL database (local or Supabase)
 
----
-
 ## 💻 Local Development
 
 ### 1. Clone the repository
 
-```bash
+```
 git clone https://github.com/YOUR_USERNAME/realtime-collab-platform.git
 cd realtime-collab-platform
 ```
 
 ### 2. Install dependencies
 
-```bash
+```
 npm install
 ```
 
 ### 3. Set up environment variables
 
-```bash
+```
 cp .env.example .env.local
 ```
 
@@ -196,7 +191,7 @@ Edit `.env.local` with your database URL and NextAuth configuration.
 
 ### 4. Set up the database
 
-```bash
+```
 npx prisma db push
 npx prisma generate
 npx prisma db seed
@@ -204,17 +199,15 @@ npx prisma db seed
 
 ### 5. Start the development server
 
-```bash
+```
 npm run dev
 ```
 
 Open:
 
-```text
+```
 http://localhost:3000
 ```
-
----
 
 ## 🌐 Deployment
 
@@ -224,7 +217,7 @@ http://localhost:3000
 2. Import the repository in Vercel
 3. Add the following environment variables:
 
-```env
+```
 DATABASE_URL=
 NEXTAUTH_URL=
 NEXTAUTH_SECRET=
@@ -232,13 +225,11 @@ NEXTAUTH_SECRET=
 
 4. Set build command:
 
-```bash
+```
 prisma generate && next build
 ```
 
 5. Deploy 🎉
-
----
 
 ## 🗄️ Database Setup (Supabase)
 
@@ -247,11 +238,9 @@ prisma generate && next build
 3. Add it as `DATABASE_URL` in Vercel environment variables
 4. Run:
 
-```bash
+```
 npx prisma db push
 ```
-
----
 
 ## 🔧 Environment Variables
 
@@ -261,8 +250,6 @@ npx prisma db push
 | `NEXTAUTH_URL` | Yes | Your application URL |
 | `NEXTAUTH_SECRET` | Yes | Random secret for JWT encryption |
 | `NEXT_PUBLIC_YJS_URL` | No | Yjs WebSocket server URL (optional) |
-
----
 
 ## 📄 License
 
