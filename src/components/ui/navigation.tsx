@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2 } from 'lucide-react';
+import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings } from 'lucide-react';
 
 export function Navigation() {
   const { data: session } = useSession();
@@ -83,6 +83,9 @@ export function Navigation() {
                       <div className="dropdown-divider" />
                       <button onClick={() => { setMenuOpen(false); router.push('/trash'); }} className="dropdown-item">
                         <Trash2 size={15} /> Trash
+                      </button>
+                      <button onClick={() => { setMenuOpen(false); router.push('/settings'); }} className="dropdown-item">
+                        <Settings size={15} /> Settings
                       </button>
                       <div className="dropdown-divider" />
                       <button onClick={() => signOut({ callbackUrl: '/auth/signin' })} className="dropdown-item danger">

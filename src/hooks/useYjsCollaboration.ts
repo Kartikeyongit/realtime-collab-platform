@@ -1,54 +1,118 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
+import * as awarenessProtocol from 'y-protocols/awareness';
 import { WebsocketProvider } from 'y-websocket';
 import { useSession } from 'next-auth/react';
+import axios from 'axios';
+
+const SYNC_TIMEOUT = 10000;
 
 export function useYjsCollaboration(documentId: string) {
   const { data: session } = useSession();
   const [connected, setConnected] = useState(false);
-  
-  const yDoc = useMemo(() => new Y.Doc(), []);
-  const yText = useMemo(() => yDoc.getText('content'), [yDoc]);
-  const awareness = useMemo(() => {
-    const aw = new Y.Doc().clientID;
-    return aw;
-  }, []);
+  const [synced, setSynced] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const fetchToken = async () => {
+      try {
+        const { data } = await axios.get(`/api/auth/ws-token?documentId=${documentId}`);
+        if (!cancelled) setToken(data.token);
+      } catch {
+        // User is not authenticated; no collaboration
+      }
+    };
+
+    fetchToken();
+
+    return () => { cancelled = true; };
+  }, [documentId]);
+
+  const yDoc = useMemo(() => new Y.Doc(), [documentId]);
+
+  const userInfo = useMemo(() => ({
+    name: session?.user?.name || 'Anonymous',
+    color: '#' + (session?.user?.id
+      ? parseInt(session.user.id.slice(0, 6), 16).toString(16).padStart(6, '0').slice(0, 6)
+      : 'f97316'),
+    id: session?.user?.id || 'anonymous',
+  }), [session]);
+
+  const awareness = useMemo(() => new awarenessProtocol.Awareness(yDoc), [yDoc]);
+
+  // Keep awareness user state in sync
+  useEffect(() => {
+    awareness.setLocalStateField('user', userInfo);
+  }, [awareness, userInfo]);
+
+  const provider = useMemo(() => {
+    if (!token) return null;
+
     const wsProvider = new WebsocketProvider(
-      'ws://localhost:1234',
+      process.env.NEXT_PUBLIC_YJS_URL || 'ws://localhost:1234',
       documentId,
       yDoc,
       {
         connect: true,
+        params: { token },
+        awareness,
       }
     );
+    return wsProvider;
+  }, [documentId, yDoc, token, awareness]);
 
-    wsProvider.on('status', (event: { status: string }) => {
-      setConnected(event.status === 'connected');
-    });
-
-    // Set user awareness
-    if (session?.user) {
-      wsProvider.awareness.setLocalState({
-        user: {
-          name: session.user.name,
-          color: '#' + Math.floor(Math.random() * 16777215).toString(16),
-          id: session.user.id,
-        },
-      });
+  // Force synced after timeout so content loads from REST API even if Yjs unavailable
+  useEffect(() => {
+    if (!token) {
+      // No token means no Yjs at all — mark synced immediately so REST API content loads
+      setSynced(true);
+      return;
     }
 
-    return () => {
-      wsProvider.destroy();
-    };
-  }, [documentId, session, yDoc]);
+    syncTimeoutRef.current = setTimeout(() => {
+      setSynced(true);
+    }, SYNC_TIMEOUT);
 
-  return {
-    yDoc,
-    yText,
-    connected,
-  };
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!provider) return;
+
+    const onStatus = (event: { status: string }) => {
+      setConnected(event.status === 'connected');
+    };
+    const onSync = (isSynced: boolean) => {
+      if (isSynced) {
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+          syncTimeoutRef.current = null;
+        }
+        setSynced(true);
+      }
+    };
+
+    provider.on('status', onStatus);
+    provider.on('sync', onSync);
+
+    return () => {
+      provider.off('status', onStatus);
+      provider.off('sync', onSync);
+      provider.destroy();
+    };
+  }, [provider]);
+
+  const isEmpty = yDoc.getXmlFragment('default').length === 0;
+
+  return { yDoc, provider, awareness, connected, synced, isEmpty, userInfo };
 }

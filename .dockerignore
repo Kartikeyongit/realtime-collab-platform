@@ -1,0 +1,10 @@
+.git
+.gitignore
+.next
+node_modules
+yjs-data
+*.md
+.env
+.env.local
+.env.example
+.gitkeep

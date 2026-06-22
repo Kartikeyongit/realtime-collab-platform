@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useCallback, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -9,8 +9,11 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
+import Collaboration from '@tiptap/extension-collaboration';
+import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { CustomTable, CustomTableRow, CustomTableCell, CustomTableHeader } from './extensions/tableExtensions';
 import { Toolbar } from './Toolbar';
+import { useYjsCollaboration } from '@/hooks/useYjsCollaboration';
 import axios from 'axios';
 
 interface CollaborativeEditorProps {
@@ -24,27 +27,82 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
   function CollaborativeEditor({ documentId, initialContent, onEditorReady, onConnectionChange }, ref) {
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const editorRef = useRef<Editor | null>(null);
+    const documentIdRef = useRef(documentId);
+    documentIdRef.current = documentId;
+    const { yDoc, provider, awareness, connected, synced, isEmpty, userInfo } = useYjsCollaboration(documentId);
+
+    const isDirtyRef = useRef(false);
+    const flushSaveRef = useRef<(() => void) | null>(null);
 
     const saveDocument = useCallback(async () => {
       if (!editorRef.current) return;
-      const content = editorRef.current.getJSON();
-      if (!content?.content) return;
-      
+      let content: any;
       try {
-        await axios.put(`/api/documents/${documentId}`, { content });
+        content = editorRef.current.getJSON();
+      } catch {
+        return;
+      }
+
+      try {
+        await axios.put(`/api/documents/${documentIdRef.current}`, { content });
+        isDirtyRef.current = false;
       } catch (error) {
         console.error('Save failed:', error);
       }
-    }, [documentId]);
+    }, []);
 
     const debouncedSave = useCallback(() => {
+      isDirtyRef.current = true;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => saveDocument(), 2000);
+      saveTimeoutRef.current = setTimeout(() => saveDocument(), 1000);
     }, [saveDocument]);
 
-    const editor = useEditor({
-      extensions: [
-        StarterKit,
+    // Trigger saves directly from Yjs content changes, bypassing ProseMirror transaction quirks
+    useEffect(() => {
+      const fragment = yDoc.getXmlFragment('default');
+      const observer = () => debouncedSave();
+      fragment.observeDeep(observer);
+      return () => { fragment.unobserveDeep(observer); };
+    }, [yDoc, debouncedSave]);
+
+    // Periodic save every 5s if dirty (catch-all fallback)
+    useEffect(() => {
+      const interval = setInterval(() => {
+        if (isDirtyRef.current) saveDocument();
+      }, 5000);
+      return () => clearInterval(interval);
+    }, [saveDocument]);
+
+    // Save on page unload
+    useEffect(() => {
+      const handleBeforeUnload = () => {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        if (isDirtyRef.current) {
+          // Synchronous save attempt via sendBeacon
+          if (editorRef.current) {
+            try {
+              const content = editorRef.current.getJSON();
+              navigator.sendBeacon(
+                `/api/documents/${documentIdRef.current}`,
+                JSON.stringify({ content }),
+              );
+            } catch {}
+          }
+        }
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, []);
+
+    // Stable cursor provider using shared awareness — never changes, so extensions are stable
+    const cursorProvider = useMemo(() => ({ awareness }), [awareness]);
+
+    const extensions = useMemo(() => {
+      const exts: any[] = [
+        StarterKit.configure({ history: false }),
         Placeholder.configure({ placeholder: 'Start typing...' }),
         Underline,
         CustomTable,
@@ -55,20 +113,40 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         Link.configure({ openOnClick: true, HTMLAttributes: { class: 'text-blue-500 underline cursor-pointer' } }),
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
         Highlight.configure({ multicolor: true }),
-      ],
-      content: initialContent || { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Start typing...' }] }] },
+        Collaboration.configure({ document: yDoc }),
+        CollaborationCursor.configure({
+          provider: cursorProvider,
+          user: userInfo,
+        }),
+      ];
+      return exts;
+    }, [yDoc, cursorProvider, userInfo]);
+
+    const editor = useEditor({
+      immediatelyRender: false,
+      extensions,
       editorProps: {
         attributes: {
           class: 'prose max-w-none focus:outline-none min-h-[500px] px-8 py-4',
         },
       },
-      onUpdate: () => debouncedSave(),
       onCreate: ({ editor: ed }) => {
         editorRef.current = ed;
         onEditorReady?.(ed);
-        onConnectionChange?.(true);
       },
-    }, [initialContent]);
+    }, [extensions]);
+
+    // Load initial content from DB into Y.Doc if the Y.Doc is empty
+    useEffect(() => {
+      if (!editorRef.current || !synced) return;
+      if (initialContent && isEmpty) {
+        editorRef.current.commands.setContent(initialContent);
+      }
+    }, [synced, isEmpty, initialContent]);
+
+    useEffect(() => {
+      onConnectionChange?.(connected);
+    }, [connected, onConnectionChange]);
 
     useImperativeHandle(ref, () => ({
       get editor() { return editorRef.current; }

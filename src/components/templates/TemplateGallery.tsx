@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { X, Sparkles, FileText, Loader2, Briefcase, BookOpen, Code2, Calendar, ClipboardList, PenTool } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 interface Template {
   id: string;

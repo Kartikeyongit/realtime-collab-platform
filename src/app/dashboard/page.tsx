@@ -1,14 +1,14 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { Search, Clock, Users, Trash2, FileText } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
-import { ToastContainer } from '@/components/ui/Toast';
-import { useToast } from '@/hooks/useToast';
+import { toast } from 'react-hot-toast';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface Document {
   id: string;
@@ -24,38 +24,70 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
-  const { toasts, addToast, removeToast } = useToast();
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 20;
 
-  useEffect(() => { if (session) fetchDocuments(); }, [session]);
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [search]);
 
-  const fetchDocuments = async () => {
+  useEffect(() => {
+    if (session) fetchDocuments(page, debouncedSearch);
+  }, [session, page, debouncedSearch]);
+
+  const fetchDocuments = useCallback(async (pageNum: number, searchTerm: string) => {
     try {
-      const { data } = await axios.get('/api/documents');
-      setDocuments(data);
-    } catch { addToast('Failed to load documents', 'error'); }
+      setLoading(true);
+      const params = new URLSearchParams({ page: String(pageNum), limit: String(limit) });
+      if (searchTerm) params.set('search', searchTerm);
+      const { data } = await axios.get(`/api/documents?${params}`);
+      setDocuments(data.documents);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
+    } catch { toast.error('Failed to load documents'); }
     finally { setLoading(false); }
-  };
+  }, []);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
       await axios.delete(`/api/documents/${deleteTarget.id}`);
       setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
-      addToast('Deleted', 'success');
-    } catch { addToast('Failed to delete', 'error'); }
+      setTotal(prev => prev - 1);
+      toast.success('Deleted');
+    } catch { toast.error('Failed to delete'); }
     setDeleteTarget(null);
   };
 
-  const filtered = documents.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: '#a8a29e' }}>Loading...</div>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '36px 24px' }}>
       <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>Documents</h1>
-        <p style={{ color: '#78716c', fontSize: '14px' }}>{documents.length} document{documents.length !== 1 ? 's' : ''}</p>
+        <p style={{ color: '#78716c', fontSize: '14px' }}>
+          {debouncedSearch
+            ? `${total} result${total !== 1 ? 's' : ''} for "${debouncedSearch}"`
+            : totalPages > 1
+              ? `Page ${page} of ${totalPages}`
+              : `${total} document${total !== 1 ? 's' : ''}`
+          }
+        </p>
       </div>
 
       <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '340px' }}>
@@ -63,7 +95,7 @@ export default function DashboardPage() {
         <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px' }} />
       </div>
 
-      {filtered.length === 0 ? (
+      {documents.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <FileText size={40} color="#d6d3d1" style={{ marginBottom: '12px' }} />
           <p style={{ fontSize: '15px', color: '#78716c', marginBottom: '4px' }}>No documents</p>
@@ -71,7 +103,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '8px' }}>
-          {filtered.map((doc) => (
+          {documents.map((doc) => (
             <div key={doc.id} onClick={() => router.push(`/documents/${doc.id}`)} className="card" style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px' }}>{doc.title}</div>
@@ -94,8 +126,15 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
+          <button disabled={page <= 1} onClick={() => handlePageChange(page - 1)} className="btn btn-secondary btn-sm">Previous</button>
+          <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#78716c', padding: '0 8px' }}>{page} / {totalPages}</span>
+          <button disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)} className="btn btn-secondary btn-sm">Next</button>
+        </div>
+      )}
+
       <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} title="Delete document?" description={`"${deleteTarget?.title}" will be permanently deleted.`} confirmText="Delete" variant="danger" />
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

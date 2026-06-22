@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 import { Document, Presence, Comment } from '@/types';
+
+enableMapSet();
 
 interface DocumentState {
   document: Document | null;
@@ -14,7 +17,9 @@ interface DocumentState {
   removePresence: (userId: string) => void;
   addComment: (comment: Comment) => void;
   updateComment: (commentId: string, updates: Partial<Comment>) => void;
+  updateCursor: (userId: string, data: any) => void;
   setConnected: (connected: boolean) => void;
+  reset: () => void;
 }
 
 export const useDocumentStore = create<DocumentState>()(
@@ -52,10 +57,24 @@ export const useDocumentStore = create<DocumentState>()(
           Object.assign(state.comments[idx], updates);
         }
       }),
-    
+
+    updateCursor: (userId, data) =>
+      set((state) => {
+        state.users.set(userId, data);
+      }),
+
     setConnected: (connected) =>
       set((state) => {
         state.isConnected = connected;
+      }),
+
+    reset: () =>
+      set((state) => {
+        state.document = null;
+        state.presences = new Map();
+        state.comments = [];
+        state.isConnected = false;
+        state.users = new Map();
       }),
   }))
 );

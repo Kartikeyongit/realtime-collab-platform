@@ -29,13 +29,13 @@ export interface DocumentCollaborator {
 export interface Comment {
   id: string;
   content: string;
-  documentId: string;
+  documentId?: string;
   userId: string;
   parentId?: string | null;
   resolved: boolean;
   position?: any;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   user: User;
   replies?: Comment[];
   mentions?: { userId: string }[];
@@ -47,13 +47,4 @@ export interface Presence {
   cursor?: { from: number; to: number } | null;
   user: User;
   lastSeen: string;
-}
-
-export interface DocumentVersion {
-  id: string;
-  documentId: string;
-  content: any;
-  version: number;
-  createdAt: string;
-  createdBy?: string | null;
 }

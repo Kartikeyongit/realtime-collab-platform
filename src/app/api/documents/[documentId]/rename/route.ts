@@ -1,16 +1,18 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkDocumentAccess, getAuthUser } from '@/lib/documentAccess';
 
 export async function PATCH(
   request: Request,
   { params }: { params: { documentId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { allowed } = await checkDocumentAccess(params.documentId, user.id, 'editor');
+    if (!allowed) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
     const { title } = await request.json();
     if (!title?.trim()) return NextResponse.json({ error: 'Title required' }, { status: 400 });

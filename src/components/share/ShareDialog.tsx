@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link, Mail, Copy, Check, Loader2, Clock, Lock, Globe, Trash2, Plus } from 'lucide-react';
+import { X, Link, Mail, Copy, Check, Loader2, Clock, Lock, Globe, Trash2, Plus, UserX } from 'lucide-react';
 import axios from 'axios';
 
 interface ShareLink {
@@ -19,9 +19,10 @@ interface ShareDialogProps {
   documentTitle: string;
   collaborators: Array<{ id: string; user: { name?: string | null; email?: string | null }; role: string }>;
   addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  onCollaboratorChange?: () => void;
 }
 
-export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collaborators, addToast }: ShareDialogProps) {
+export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collaborators, addToast, onCollaboratorChange }: ShareDialogProps) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'editor' | 'viewer'>('editor');
   const [sharing, setSharing] = useState(false);
@@ -32,6 +33,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   const [linkPassword, setLinkPassword] = useState('');
   const [linkExpiry, setLinkExpiry] = useState('');
   const [creatingLink, setCreatingLink] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => { if (isOpen) fetchShareLinks(); }, [isOpen, documentId]);
 
@@ -42,6 +44,16 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
       setShareLinks(data);
     } catch { /* ignore */ }
     finally { setLoadingLinks(false); }
+  };
+
+  const handleRemove = async (collaboratorId: string) => {
+    setRemovingId(collaboratorId);
+    try {
+      await axios.delete(`/api/documents/${documentId}/share`, { data: { collaboratorId } });
+      addToast('Collaborator removed', 'success');
+      onCollaboratorChange?.();
+    } catch { addToast('Failed to remove', 'error'); }
+    finally { setRemovingId(null); }
   };
 
   const handleAdd = async () => {
@@ -117,15 +129,20 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
             <div style={{ marginBottom: '24px' }}>
               <label style={{ fontSize: '12px', fontWeight: 600, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>People with access</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {collaborators.map((c) => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '10px', background: '#fafaf9' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c' }}>{c.user.name?.charAt(0) || '?'}</div>
-                      <div><div style={{ fontSize: '13px', fontWeight: 500 }}>{c.user.name}</div><div style={{ fontSize: '11px', color: '#a8a29e' }}>{c.user.email}</div></div>
+                  {collaborators.map((c) => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '10px', background: '#fafaf9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c' }}>{c.user.name?.charAt(0) || '?'}</div>
+                        <div><div style={{ fontSize: '13px', fontWeight: 500 }}>{c.user.name}</div><div style={{ fontSize: '11px', color: '#a8a29e' }}>{c.user.email}</div></div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="badge badge-orange" style={{ fontSize: '10px' }}>{c.role}</span>
+                        <button onClick={() => handleRemove(c.id)} disabled={removingId === c.id} className="btn btn-ghost btn-sm" style={{ padding: '4px', color: '#ef4444' }}>
+                          {removingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <UserX size={13} />}
+                        </button>
+                      </div>
                     </div>
-                    <span className="badge badge-orange" style={{ fontSize: '10px' }}>{c.role}</span>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}

@@ -3,14 +3,13 @@
 import { useState } from 'react';
 import { ExportService } from '@/lib/exportService';
 import { FileText, FileType, FileCode, Globe, Download, X, Loader2, CheckSquare, Square } from 'lucide-react';
+import type { Editor } from '@tiptap/react';
 
 interface ExportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  documentId: string;
   documentTitle: string;
-  editorElementId: string;
-  editor?: any;
+  editor?: Editor | null;
   addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -23,12 +22,15 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
     if (!editor) return document.querySelector('.ProseMirror')?.innerHTML || '';
     if (exportSelectionOnly && !editor.state.selection.empty) {
       const { from, to } = editor.state.selection;
-      return editor.view.dom.innerHTML.substring(
-        editor.view.dom.innerHTML.indexOf(editor.view.nodeDOM(from)?.outerHTML || ''),
-        editor.view.dom.innerHTML.lastIndexOf(editor.view.nodeDOM(to)?.outerHTML || '') + (editor.view.nodeDOM(to)?.outerHTML?.length || 0)
-      );
+      return editor.state.doc.textBetween(from, to, '\n');
     }
-    return document.querySelector('.ProseMirror')?.innerHTML || '';
+    return editor.getHTML();
+  };
+
+  const getSelectionHtml = (): string | null => {
+    if (!editor || editor.state.selection.empty) return null;
+    const { from, to } = editor.state.selection;
+    return editor.state.doc.textBetween(from, to, '\n');
   };
 
   const handleExport = async (format: string) => {
@@ -39,8 +41,20 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
 
       switch (format) {
         case 'pdf': {
-          const el = document.querySelector('.ProseMirror') as HTMLElement;
-          if (el) await ExportService.toPDF(el, documentTitle + (exportSelectionOnly ? ' (Selection)' : ''));
+          if (exportSelectionOnly && editor && !editor.state.selection.empty) {
+            const selText = getSelectionHtml();
+            if (selText) {
+              const tempEl = document.createElement('div');
+              tempEl.style.cssText = 'padding: 20px; font-family: system-ui, sans-serif; line-height: 1.6; position: absolute; left: -9999px; top: 0;';
+              tempEl.textContent = selText;
+              document.body.appendChild(tempEl);
+              await ExportService.toPDF(tempEl, documentTitle + ' (Selection)');
+              document.body.removeChild(tempEl);
+            }
+          } else {
+            const el = document.querySelector('.ProseMirror') as HTMLElement;
+            if (el) await ExportService.toPDF(el, documentTitle);
+          }
           break;
         }
         case 'docx': await ExportService.toDOCXFromHTML(content, documentTitle); break;

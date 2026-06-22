@@ -22,7 +22,8 @@ export async function DELETE(
     if (!document) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (document.ownerId !== session.user.id) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
-    await prisma.documentVersion.deleteMany({ where: { documentId: params.documentId } });
+    await prisma.presence.deleteMany({ where: { documentId: params.documentId } });
+    await prisma.shareLink.deleteMany({ where: { documentId: params.documentId } });
     await prisma.comment.deleteMany({ where: { documentId: params.documentId } });
     await prisma.documentCollaborator.deleteMany({ where: { documentId: params.documentId } });
     await prisma.document.delete({ where: { id: params.documentId } });

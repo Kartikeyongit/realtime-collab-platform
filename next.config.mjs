@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: process.env.DOCKER ? 'standalone' : undefined,
   images: {
-    domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
+    remotePatterns: [
+      { hostname: 'avatars.githubusercontent.com' },
+      { hostname: 'lh3.googleusercontent.com' },
+    ],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -10,7 +14,6 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
-        dns: false,
         child_process: false,
       };
     }
@@ -22,12 +25,6 @@ const nextConfig = {
     'y-protocols',
     'y-prosemirror',
   ],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

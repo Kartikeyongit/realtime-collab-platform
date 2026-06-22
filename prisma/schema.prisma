@@ -10,7 +10,7 @@ datasource db {
 model User {
   id             String                 @id @default(cuid())
   name           String?
-  email          String?                @unique
+  email          String                 @unique
   emailVerified  DateTime?
   image          String?
   password       String?
@@ -18,8 +18,10 @@ model User {
   sessions       Session[]
   documents      Document[]
   comments       Comment[]
+  mentions       CommentMention[]
   presence       Presence[]
   collaborations DocumentCollaborator[]
+  notifications  Notification[]
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 }
@@ -54,11 +56,12 @@ model Document {
   id            String                 @id @default(cuid())
   title         String
   content       Json?
+  yjsState      Bytes?
   ownerId       String
   owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   collaborators DocumentCollaborator[]
-  versions      DocumentVersion[]
   comments      Comment[]
+  presences     Presence[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   ShareLink     ShareLink[]
@@ -76,16 +79,6 @@ model DocumentCollaborator {
   @@unique([documentId, userId])
 }
 
-model DocumentVersion {
-  id         String   @id @default(cuid())
-  documentId String
-  content    Json
-  version    Int
-  createdAt  DateTime @default(now())
-  createdBy  String?
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-}
-
 model Comment {
   id         String           @id @default(cuid())
   content    String           @db.Text
@@ -101,6 +94,7 @@ model Comment {
   parent     Comment?         @relation("CommentReplies", fields: [parentId], references: [id])
   replies    Comment[]        @relation("CommentReplies")
   mentions   CommentMention[]
+  notifications Notification[]
 }
 
 model CommentMention {
@@ -108,6 +102,9 @@ model CommentMention {
   commentId String
   userId    String
   comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
 }
 
 model Presence {
@@ -117,6 +114,7 @@ model Presence {
   cursor     Json?
   lastSeen   DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, documentId])
 }
@@ -129,4 +127,17 @@ model ShareLink {
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
   document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  commentId String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
 }

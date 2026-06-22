@@ -1,16 +1,40 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useDocumentStore } from '@/store/documentStore';
+import { useSession } from 'next-auth/react';
 import { Presence } from '@/types';
+import axios from 'axios';
 
 export function useCollaboration(documentId: string) {
   const socketRef = useRef<Socket | null>(null);
-  const { updatePresence, removePresence, setConnected, addComment } = useDocumentStore();
+  const { updatePresence, removePresence, setConnected, addComment, updateCursor } = useDocumentStore();
+  const { data: session } = useSession();
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const socket = io('http://localhost:3001', {
+    let cancelled = false;
+
+    const fetchToken = async () => {
+      try {
+        const { data } = await axios.get(`/api/auth/ws-token?documentId=${documentId}`);
+        if (!cancelled) setToken(data.token);
+      } catch {
+        // User is not authenticated; no socket connection
+      }
+    };
+
+    fetchToken();
+
+    return () => { cancelled = true; };
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!token || !documentId) return;
+
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
+      auth: { token },
       query: { documentId },
     });
 
@@ -18,12 +42,14 @@ export function useCollaboration(documentId: string) {
 
     socket.on('connect', () => {
       setConnected(true);
-      console.log('Connected to collaboration server');
     });
 
     socket.on('disconnect', () => {
       setConnected(false);
-      console.log('Disconnected from collaboration server');
+    });
+
+    socket.on('presence:list', (presences: Presence[]) => {
+      presences.forEach(p => updatePresence(p));
     });
 
     socket.on('presence:update', (presence: Presence) => {
@@ -38,26 +64,14 @@ export function useCollaboration(documentId: string) {
       addComment(comment);
     });
 
-    // Send cursor position
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        socket.emit('cursor:update', {
-          documentId,
-          from: range.startOffset,
-          to: range.endOffset,
-        });
-      }
-    };
-
-    document.addEventListener('selectionchange', handleSelectionChange);
+    socket.on('cursor:update', (data: any) => {
+      updateCursor(data.userId, data);
+    });
 
     return () => {
       socket.disconnect();
-      document.removeEventListener('selectionchange', handleSelectionChange);
     };
-  }, [documentId]);
+  }, [documentId, token]);
 
   return {
     socket: socketRef.current,

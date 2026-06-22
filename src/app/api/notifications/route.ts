@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -8,32 +10,32 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const notifications = [
-    {
-      id: '1',
-      type: 'share',
-      message: 'Alex shared "Project Plan" with you',
-      documentId: 'doc1',
-      read: false,
-      createdAt: new Date(Date.now() - 1800000).toISOString(),
-    },
-    {
-      id: '2',
-      type: 'comment',
-      message: 'Sarah commented on "Meeting Notes"',
-      documentId: 'doc2',
-      read: false,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: '3',
-      type: 'edit',
-      message: 'John edited "Technical Spec"',
-      documentId: 'doc3',
-      read: true,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ];
+  const { prisma } = await import('@/lib/prisma');
 
-  return NextResponse.json(notifications);
+  const notifications = await prisma.notification.findMany({
+    where: { userId: session.user.id },
+    include: {
+      comment: {
+        select: {
+          id: true,
+          content: true,
+          user: { select: { name: true } },
+          document: { select: { id: true, title: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  });
+
+  const result = notifications.map(n => ({
+    id: n.id,
+    type: 'comment' as const,
+    message: `${n.comment.user.name || 'Someone'} commented on "${n.comment.document.title}"`,
+    documentId: n.comment.document.id,
+    read: n.read,
+    createdAt: n.createdAt.toISOString(),
+  }));
+
+  return NextResponse.json(result);
 }

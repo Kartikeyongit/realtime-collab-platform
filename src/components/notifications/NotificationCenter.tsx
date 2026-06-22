@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, AtSign, UserPlus, MessageSquare, Edit } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bell, AtSign, UserPlus, MessageSquare, Edit, CheckCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 
@@ -17,6 +18,7 @@ interface Notification {
 
 export function NotificationCenter() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -33,6 +35,30 @@ export function NotificationCenter() {
       const { data } = await axios.get('/api/notifications');
       setNotifications(data);
     } catch {}
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      await axios.patch(`/api/notifications/${id}`);
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      );
+    } catch {}
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.patch('/api/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch {}
+  };
+
+  const handleClick = (n: Notification) => {
+    if (!n.read) markAsRead(n.id);
+    if (n.documentId) {
+      setIsOpen(false);
+      router.push(`/documents/${n.documentId}`);
+    }
   };
 
   const unread = notifications.filter(n => !n.read).length;
@@ -62,13 +88,35 @@ export function NotificationCenter() {
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 30 }} onClick={() => setIsOpen(false)} />
           <div className="dropdown" style={{ width: '340px', right: 0 }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid #e7e5e4', fontWeight: 600, fontSize: '14px' }}>Notifications</div>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>Notifications</span>
+              {unread > 0 && (
+                <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#f97316', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCheck size={14} /> Mark all read
+                </button>
+              )}
+            </div>
             <div style={{ maxHeight: '360px', overflow: 'auto' }}>
               {notifications.length === 0 ? (
                 <div style={{ padding: '32px', textAlign: 'center', color: '#a8a29e', fontSize: '13px' }}>No notifications</div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} style={{ padding: '12px 16px', display: 'flex', gap: '10px', borderBottom: '1px solid #f5f5f4', background: n.read ? 'transparent' : '#fff7ed', cursor: 'pointer', fontSize: '13px' }}>
+                  <div
+                    key={n.id}
+                    onClick={() => handleClick(n)}
+                    style={{
+                      padding: '12px 16px',
+                      display: 'flex',
+                      gap: '10px',
+                      borderBottom: '1px solid #f5f5f4',
+                      background: n.read ? 'transparent' : '#fff7ed',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f4'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = n.read ? 'transparent' : '#fff7ed'; }}
+                  >
                     <div style={{ marginTop: '2px' }}>{getIcon(n.type)}</div>
                     <div style={{ flex: 1 }}>
                       <p style={{ marginBottom: '2px' }}>{n.message}</p>

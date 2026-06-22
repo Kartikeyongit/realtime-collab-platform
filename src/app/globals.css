@@ -447,6 +447,50 @@ body {
   font-style: italic;
 }
 
+/* Remote collaboration cursor indicators */
+.collaboration-cursor__caret {
+  position: relative;
+  border-left: 2px solid;
+  margin-left: -1px;
+  margin-right: -1px;
+  vertical-align: text-top;
+}
+
+.collaboration-cursor__label {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  animation: cursorLabelIn 0.15s ease-out;
+}
+
+@keyframes cursorLabelIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(3px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+/* Remote selection highlight */
+.ProseMirror-yjs-selection {
+  border-radius: 3px;
+}
+
 .ProseMirror mark {
   background: #fef3c7;
   padding: 2px 6px;
@@ -539,9 +583,17 @@ html {
 }
 
 /* Mobile Responsive */
+.show-mobile {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
   .hide-mobile {
     display: none !important;
+  }
+  
+  .show-mobile {
+    display: flex !important;
   }
   
   .ProseMirror {
@@ -565,9 +617,26 @@ html {
   /* Responsive dialogs */
   [style*="width: 480px"],
   [style*="width: 440px"],
-  [style*="width: 460px"] {
+  [style*="width: 460px"],
+  [style*="width: 420px"] {
     width: calc(100vw - 40px) !important;
     max-width: 480px !important;
+  }
+
+  .card {
+    padding: 16px !important;
+  }
+
+  /* Comment panel full-width on mobile */
+  [id*="comment-thread"] {
+    position: fixed !important;
+    right: 0 !important;
+    top: 104px !important;
+    bottom: 0 !important;
+    width: calc(100vw - 40px) !important;
+    max-width: 360px !important;
+    z-index: 30 !important;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.08) !important;
   }
 }
 

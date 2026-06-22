@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { InlineRename } from '@/components/ui/InlineRename';
 import { 
-  FileText, Clock, Users, MoreVertical, Star, 
+  FileText, Clock, Users, MoreVertical, 
   Trash2, Copy, ExternalLink 
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -45,8 +45,10 @@ export function DocumentCard({ document, viewMode, onDelete, onRename }: Documen
   const handleDuplicate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      const { data: doc } = await axios.get(`/api/documents/${document.id}`);
       const response = await axios.post('/api/documents', {
         title: `${document.title} (Copy)`,
+        content: doc.content,
       });
       toast.success('Document duplicated');
       router.push(`/documents/${response.data.id}`);

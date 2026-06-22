@@ -1,15 +1,17 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkDocumentAccess, getAuthUser } from '@/lib/documentAccess';
 
 export async function DELETE(
   request: Request,
   { params }: { params: { documentId: string; linkId: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { allowed } = await checkDocumentAccess(params.documentId, user.id, 'owner');
+  if (!allowed) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   const { prisma } = await import('@/lib/prisma');
   await prisma.shareLink.delete({ where: { id: params.linkId } });

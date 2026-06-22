@@ -1,8 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
 
-// Lazy-load Prisma to avoid build errors
 const getPrisma = async () => {
   const { prisma } = await import('@/lib/prisma');
   return prisma;
@@ -30,10 +28,8 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials');
         }
 
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        const { verifyPassword } = await import('@/lib/password');
+        const isCorrectPassword = verifyPassword(credentials.password, user.password);
 
         if (!isCorrectPassword) {
           throw new Error('Invalid credentials');
@@ -52,7 +48,7 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-build-only',
+  secret: process.env.NEXTAUTH_SECRET!,
   pages: {
     signIn: '/auth/signin',
   },

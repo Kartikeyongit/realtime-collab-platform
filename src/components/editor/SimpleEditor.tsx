@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Toolbar } from './Toolbar';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -20,15 +20,14 @@ export function SimpleEditor({ documentId, initialContent, onSave }: SimpleEdito
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const saveDocument = useCallback(async (content: any) => {
-    if (!isDirty) return;
+  const saveDocument = useCallback(async (content: any, force?: boolean) => {
+    if (!isDirty && !force) return;
     
     setIsSaving(true);
     try {
-      await axios.put(`/api/documents/${documentId}/save`, {
-        content: content,
-      });
+      await axios.put(`/api/documents/${documentId}`, { content });
       setLastSaved(new Date());
       setIsDirty(false);
       onSave?.();
@@ -40,13 +39,24 @@ export function SimpleEditor({ documentId, initialContent, onSave }: SimpleEdito
     }
   }, [documentId, isDirty, onSave]);
 
+  const debouncedSave = useCallback((content: any) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveDocument(content), 2000);
+  }, [saveDocument]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({
         placeholder: 'Start typing...',
       }),
-      Underline, // Added underline extension
+      Underline,
     ],
     content: initialContent || {
       type: 'doc',
@@ -71,19 +81,14 @@ export function SimpleEditor({ documentId, initialContent, onSave }: SimpleEdito
     },
     onUpdate: ({ editor }) => {
       setIsDirty(true);
-      const content = editor.getJSON();
-      const timeoutId = setTimeout(() => {
-        saveDocument(content);
-      }, 2000);
-
-      return () => clearTimeout(timeoutId);
+      debouncedSave(editor.getJSON());
     },
   });
 
   const handleManualSave = () => {
     if (editor) {
       const content = editor.getJSON();
-      saveDocument(content);
+      saveDocument(content, true);
       toast.success('Document saved!');
     }
   };

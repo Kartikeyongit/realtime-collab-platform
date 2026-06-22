@@ -13,7 +13,7 @@ export async function POST(
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { content } = body;
+    const { content, parentId, position } = body;
 
     if (!content?.trim()) {
       return NextResponse.json({ error: 'Content required' }, { status: 400 });
@@ -26,14 +26,44 @@ export async function POST(
         content: content.trim(),
         documentId: params.documentId,
         userId: session.user.id,
-        position: {},
+        parentId: parentId || null,
+        position: position || {},
       },
       include: {
         user: { select: { id: true, name: true, image: true } },
       },
     });
 
-    console.log('Comment created:', comment.id);
+    // Create notifications for document owner and collaborators (excluding comment author)
+    const document = await prisma.document.findUnique({
+      where: { id: params.documentId },
+      select: {
+        ownerId: true,
+        collaborators: { select: { userId: true } },
+      },
+    });
+
+    if (document) {
+      const notifyUserIds = new Set<string>();
+      if (document.ownerId !== session.user.id) {
+        notifyUserIds.add(document.ownerId);
+      }
+      for (const c of document.collaborators) {
+        if (c.userId !== session.user.id) {
+          notifyUserIds.add(c.userId);
+        }
+      }
+
+      if (notifyUserIds.size > 0) {
+        await prisma.notification.createMany({
+          data: Array.from(notifyUserIds).map(userId => ({
+            userId,
+            commentId: comment.id,
+          })),
+        });
+      }
+    }
+
     return NextResponse.json(comment, { status: 201 });
   } catch (error: any) {
     console.error('Comment create error:', error.message);

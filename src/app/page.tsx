@@ -40,12 +40,6 @@ export default function HomePage() {
     }
   };
 
-  const stats = [
-    { icon: Users, value: '10K+', label: 'Teams' },
-    { icon: Globe, value: '50K+', label: 'Documents' },
-    { icon: Shield, value: '99.9%', label: 'Uptime' },
-  ];
-
   const features = [
     { icon: Zap, title: 'Lightning Fast', desc: 'Real-time sync across all devices with zero lag.', color: '#f97316', bg: '#fff7ed' },
     { icon: Users, title: 'Team Collaboration', desc: 'Live cursors show who\'s editing what in real-time.', color: '#8b5cf6', bg: '#f5f3ff' },
@@ -85,17 +79,6 @@ export default function HomePage() {
               <Link href="/auth/signin" className="btn btn-secondary btn-lg">Sign in</Link>
             </>
           )}
-        </div>
-
-        {/* Stats */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', flexWrap: 'wrap' }}>
-          {stats.map((s, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100px' }}>
-              <s.icon size={20} color="#d6d3d1" style={{ marginBottom: '6px' }} />
-              <div style={{ fontSize: '22px', fontWeight: 700, color: '#1c1917' }}>{s.value}</div>
-              <div style={{ fontSize: '12px', color: '#a8a29e' }}>{s.label}</div>
-            </div>
-          ))}
         </div>
       </section>
 

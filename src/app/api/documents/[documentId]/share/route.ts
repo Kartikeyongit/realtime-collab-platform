@@ -12,6 +12,12 @@ export async function POST(
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { email, role = 'editor' } = await request.json();
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+  }
+
   const { prisma } = await import('@/lib/prisma');
 
   const document = await prisma.document.findUnique({
@@ -32,4 +38,32 @@ export async function POST(
   });
 
   return NextResponse.json(collaborator, { status: 201 });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { documentId: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { collaboratorId } = await request.json();
+  if (!collaboratorId) return NextResponse.json({ error: 'collaboratorId required' }, { status: 400 });
+
+  const { prisma } = await import('@/lib/prisma');
+
+  const document = await prisma.document.findUnique({
+    where: { id: params.documentId },
+    select: { ownerId: true },
+  });
+
+  if (!document || document.ownerId !== session.user.id) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
+
+  await prisma.documentCollaborator.delete({
+    where: { id: collaboratorId },
+  });
+
+  return NextResponse.json({ success: true });
 }

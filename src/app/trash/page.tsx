@@ -7,8 +7,7 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2, RotateCcw, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
-import { ToastContainer } from '@/components/ui/Toast';
-import { useToast } from '@/hooks/useToast';
+import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
 interface TrashedDoc {
@@ -25,7 +24,6 @@ export default function TrashPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<TrashedDoc | null>(null);
   const [emptyTarget, setEmptyTarget] = useState(false);
-  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => { if (session) fetchTrash(); }, [session]);
 
@@ -33,7 +31,7 @@ export default function TrashPage() {
     try {
       const { data } = await axios.get('/api/documents/trash');
       setDocuments(data);
-    } catch { addToast('Failed to load trash', 'error'); }
+    } catch { toast.error('Failed to load trash'); }
     finally { setLoading(false); }
   };
 
@@ -41,8 +39,8 @@ export default function TrashPage() {
     try {
       await axios.patch(`/api/documents/${id}/restore`);
       setDocuments(prev => prev.filter(d => d.id !== id));
-      addToast('Document restored', 'success');
-    } catch { addToast('Failed to restore', 'error'); }
+      toast.success('Document restored');
+    } catch { toast.error('Failed to restore'); }
   };
 
   const handlePermanentDelete = async () => {
@@ -50,19 +48,17 @@ export default function TrashPage() {
     try {
       await axios.delete(`/api/documents/${deleteTarget.id}/permanent`);
       setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
-      addToast('Permanently deleted', 'success');
-    } catch { addToast('Failed to delete', 'error'); }
+      toast.success('Permanently deleted');
+    } catch { toast.error('Failed to delete'); }
     setDeleteTarget(null);
   };
 
   const handleEmptyTrash = async () => {
     try {
-      for (const doc of documents) {
-        await axios.delete(`/api/documents/${doc.id}/permanent`);
-      }
+      await axios.delete('/api/documents/trash');
       setDocuments([]);
-      addToast('Trash emptied', 'success');
-    } catch { addToast('Failed to empty trash', 'error'); }
+      toast.success('Trash emptied');
+    } catch { toast.error('Failed to empty trash'); }
     setEmptyTarget(false);
   };
 
@@ -150,7 +146,6 @@ export default function TrashPage() {
         variant="danger"
       />
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

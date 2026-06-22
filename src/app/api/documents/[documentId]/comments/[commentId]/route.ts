@@ -14,6 +14,14 @@ export async function PATCH(
   const { resolved, content } = await request.json();
   const { prisma } = await import('@/lib/prisma');
 
+  const existing = await prisma.comment.findUnique({
+    where: { id: params.commentId },
+    select: { userId: true },
+  });
+  if (!existing || existing.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const comment = await prisma.comment.update({
     where: { id: params.commentId },
     data: { ...(resolved !== undefined && { resolved }), ...(content && { content }) },
@@ -31,6 +39,15 @@ export async function DELETE(
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { prisma } = await import('@/lib/prisma');
+
+  const existing = await prisma.comment.findUnique({
+    where: { id: params.commentId },
+    select: { userId: true },
+  });
+  if (!existing || existing.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   await prisma.comment.delete({ where: { id: params.commentId } });
 
   return NextResponse.json({ success: true });
