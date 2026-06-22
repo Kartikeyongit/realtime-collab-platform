@@ -3,105 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { X, Sparkles, FileText, Loader2, Briefcase, BookOpen, Code2, Calendar, ClipboardList, PenTool } from 'lucide-react';
-
-interface Template {
-  id: string;
-  name: string;
-  icon: any;
-  description: string;
-  category: string;
-  content: any;
-}
-
-const templates: Template[] = [
-  {
-    id: 'meeting-notes', name: 'Meeting Notes', icon: Calendar,
-    description: 'Structured meeting notes with agenda and action items',
-    category: 'Business',
-    content: { type: 'doc', content: [
-      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Meeting Notes' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: '📅 Date: [Insert Date]' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: '👥 Attendees: [Names]' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Agenda' }] },
-      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Topic 1' }] }] }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Action Items' }] },
-      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Task 1 - @owner - Due date' }] }] }] },
-    ]}
-  },
-  {
-    id: 'project-proposal', name: 'Project Proposal', icon: Briefcase,
-    description: 'Professional project proposal with objectives and timeline',
-    category: 'Business',
-    content: { type: 'doc', content: [
-      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Project Proposal' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Executive Summary' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Brief overview of the project...' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Objectives' }] },
-      { type: 'orderedList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Primary objective' }] }] }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Timeline' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Phase 1: [Start] - [End]' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Budget' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Estimated: $[Amount]' }] },
-    ]}
-  },
-  {
-    id: 'technical-spec', name: 'Technical Spec', icon: Code2,
-    description: 'Technical documentation with code blocks and API specs',
-    category: 'Technical',
-    content: { type: 'doc', content: [
-      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Technical Specification' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Overview' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'System architecture and design...' }] },
-      { type: 'codeBlock', content: [{ type: 'text', text: '// Architecture overview\nSystem {\n  Frontend: React\n  Backend: Node.js\n  Database: PostgreSQL\n}' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'API Endpoints' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'GET /api/v1/resource - Description' }] },
-    ]}
-  },
-  {
-    id: 'weekly-report', name: 'Weekly Report', icon: ClipboardList,
-    description: 'Track weekly progress and accomplishments',
-    category: 'Business',
-    content: { type: 'doc', content: [
-      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Weekly Report' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Week of: [Date]' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Accomplishments' }] },
-      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Achievement 1' }] }] }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Challenges' }] },
-      { type: 'paragraph' },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Next Week Plans' }] },
-      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Plan 1' }] }] }] },
-    ]}
-  },
-  {
-    id: 'blog-post', name: 'Blog Post', icon: PenTool,
-    description: 'Ready-to-write blog post structure',
-    category: 'Creative',
-    content: { type: 'doc', content: [
-      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Blog Post Title' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'By [Author] · [Date]' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Introduction' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Hook your readers with an engaging opening...' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Main Content' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Your main points here...' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Conclusion' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Wrap up and call to action...' }] },
-    ]}
-  },
-  {
-    id: 'research-notes', name: 'Research Notes', icon: BookOpen,
-    description: 'Organize research findings and references',
-    category: 'Academic',
-    content: { type: 'doc', content: [
-      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Research Notes' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Topic: [Research Topic]' }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Key Findings' }] },
-      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Finding 1 - Source: [Reference]' }] }] }] },
-      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'References' }] },
-      { type: 'orderedList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: '[Author], [Title], [Year]' }] }] }] },
-    ]}
-  },
-];
+import { X, Loader2 } from 'lucide-react';
+import { templates, Template } from './templateData';
 
 interface TemplateGalleryProps {
   isOpen: boolean;
@@ -114,7 +17,7 @@ export function TemplateGallery({ isOpen, onClose, addToast }: TemplateGalleryPr
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [creating, setCreating] = useState<string | null>(null);
 
-  const categories = ['All', 'Business', 'Technical', 'Creative', 'Academic'];
+  const categories = ['All', ...new Set(templates.map(t => t.category))];
   const filtered = selectedCategory === 'All' ? templates : templates.filter(t => t.category === selectedCategory);
 
   const createFromTemplate = async (template: Template) => {

@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings } from 'lucide-react';
+import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate } from 'lucide-react';
 
 export function Navigation() {
   const { data: session } = useSession();
@@ -50,10 +50,16 @@ export function Navigation() {
             <span style={{ fontWeight: 700, fontSize: '17px', color: '#1c1917', letterSpacing: '-0.02em' }}>CollabDocs</span>
           </Link>
           {session && (
-            <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <LayoutDashboard size={15} />
-              Documents
-            </Link>
+            <>
+              <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <LayoutDashboard size={15} />
+                Documents
+              </Link>
+              <Link href="/templates" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <LayoutTemplate size={15} />
+                Templates
+              </Link>
+            </>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -79,6 +85,9 @@ export function Navigation() {
                       <div className="dropdown-divider" />
                       <button onClick={() => { setMenuOpen(false); router.push('/dashboard'); }} className="dropdown-item">
                         <LayoutDashboard size={15} /> Dashboard
+                      </button>
+                      <button onClick={() => { setMenuOpen(false); router.push('/templates'); }} className="dropdown-item">
+                        <LayoutTemplate size={15} /> Templates
                       </button>
                       <div className="dropdown-divider" />
                       <button onClick={() => { setMenuOpen(false); router.push('/trash'); }} className="dropdown-item">

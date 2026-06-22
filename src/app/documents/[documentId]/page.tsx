@@ -21,12 +21,10 @@ import { ConfirmDialog } from '@/components/ui/Dialog';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { WordCount } from '@/components/editor/WordCount';
-import { TemplateGallery } from '@/components/templates/TemplateGallery';
 import { 
   MessageSquare, Share2, ArrowLeft, 
   MoreHorizontal, Trash2, Copy,
   Download, Search, Sparkles, Clock, Wifi, WifiOff,
-  FileText
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -45,7 +43,6 @@ export default function DocumentPage() {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
   
   const [isLoading, setIsLoading] = useState(true);
   const abortRef = useRef(new AbortController());
@@ -190,7 +187,6 @@ export default function DocumentPage() {
           <button onClick={() => setShowSearch(!showSearch)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Find & Replace"><Search size={15} /></button>
           <button onClick={() => setShowExport(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Export"><Download size={15} /></button>
           <div className="hide-mobile" style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
-          <button onClick={() => setShowTemplates(true)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 7px' }} title="Templates"><FileText size={15} /></button>
           <button onClick={() => setShowComments(!showComments)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Comments"><MessageSquare size={15} /></button>
           <button onClick={() => setShowShare(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Share"><Share2 size={15} /></button>
           <div className="hide-mobile" style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
@@ -202,7 +198,6 @@ export default function DocumentPage() {
                 <div className="dropdown" style={{ right: 0 }}>
                   <button onClick={() => { setShowSearch(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Search size={15} /> Find & Replace</button>
                   <button onClick={() => { setShowAI(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Sparkles size={15} /> AI Assistant</button>
-                  <button onClick={() => { setShowTemplates(true); setShowMenu(false); }} className="dropdown-item show-mobile"><FileText size={15} /> Templates</button>
                   <button onClick={() => { setShowComments(true); setShowMenu(false); }} className="dropdown-item show-mobile"><MessageSquare size={15} /> Comments</button>
                   <div className="dropdown-divider" />
                   <button onClick={() => { handleDuplicate(); setShowMenu(false); }} className="dropdown-item"><Copy size={15} /> Duplicate</button>
@@ -260,7 +255,6 @@ export default function DocumentPage() {
       <ExportDialog isOpen={showExport} onClose={() => setShowExport(false)} documentTitle={title} editor={editorInstance} addToast={addToast} />
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} documentId={documentId} documentTitle={title} collaborators={document?.collaborators || []} addToast={addToast} onCollaboratorChange={() => fetchDocument()} />
       <ConfirmDialog isOpen={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} onConfirm={handleDelete} title="Delete document?" description={`"${title}" will be permanently deleted.`} confirmText="Delete" variant="danger" />
-      <TemplateGallery isOpen={showTemplates} onClose={() => setShowTemplates(false)} addToast={addToast} />
     </div>
   );
 }
