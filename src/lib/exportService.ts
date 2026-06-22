@@ -1,231 +1,203 @@
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { saveAs } from 'file-saver';
 import TurndownService from 'turndown';
-import {
-  Document, Packer, Paragraph, TextRun, HeadingLevel,
-  Table, TableRow, TableCell, AlignmentType,
-} from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell } from 'docx';
+
+// TipTap JSON node shape
+interface TNode {
+  type?: string;
+  content?: TNode[];
+  text?: string;
+  marks?: { type: string; attrs?: Record<string, any> }[];
+  attrs?: Record<string, any>;
+}
 
 export class ExportService {
-  // PDF Export — Multi-page A4 with margins and page numbers
-  static async toPDF(element: HTMLElement, filename: string) {
-    const margin = 40;
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const contentWidth = pageWidth - 2 * margin;
-    const contentHeight = pageHeight - 2 * margin;
+  // ── PDF — uses browser native print (handles any HTML, multi-page, tables, images) ──
+  static toPDF(element: HTMLElement, _filename: string): Promise<void> {
+    return new Promise((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position: fixed; width: 0; height: 0; border: 0; visibility: hidden;';
+      document.body.appendChild(iframe);
 
-    // Clone the editor content into a hidden A4-width container
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = `
-      position: absolute; left: 0; top: 0; z-index: -1;
-      width: ${contentWidth}px; height: auto;
-      background: white; padding: ${margin}px ${margin}px 0;
-      font-family: system-ui, -apple-system, sans-serif;
-      line-height: 1.6; color: #333;
-    `;
-    wrapper.innerHTML = element.innerHTML;
-    document.body.appendChild(wrapper);
+      const w = iframe.contentWindow!;
+      const d = w.document;
+      d.open();
+      d.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 20mm; }
+  @media print {
+    html, body { margin: 0; padding: 0; background: white; }
+    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #222; font-size: 11pt; }
+    img { max-width: 100%; height: auto; }
+    table { border-collapse: collapse; width: 100%; page-break-inside: avoid; }
+    td, th { border: 1px solid #bbb; padding: 6px 8px; text-align: left; font-size: 10pt; }
+    th { background: #f5f5f5; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; page-break-inside: avoid; font-size: 9pt; }
+    code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+    blockquote { border-left: 4px solid #888; padding-left: 14px; margin: 1em 0; color: #555; page-break-inside: avoid; }
+    h1, h2, h3, h4 { page-break-after: avoid; }
+    pre, blockquote, table, img { page-break-inside: avoid; }
+    a { color: #0563C1; text-decoration: underline; }
+  }
+</style>
+</head><body>${element.innerHTML}</body></html>`);
+      d.close();
 
-    const fullHeight = wrapper.scrollHeight;
-    const clip = document.createElement('div');
-    clip.style.cssText = `
-      position: absolute; left: 0; top: -10000px; z-index: -1;
-      width: ${contentWidth}px; height: ${contentHeight}px;
-      overflow: hidden; background: white;
-    `;
-    const inner = document.createElement('div');
-    inner.style.cssText = `width: 100%; padding: ${margin}px ${margin}px 0;`;
-    inner.innerHTML = element.innerHTML;
-    clip.appendChild(inner);
-    document.body.appendChild(clip);
-
-    const numPages = Math.max(1, Math.ceil(fullHeight / contentHeight));
-
-    for (let i = 0; i < numPages; i++) {
-      if (i > 0) pdf.addPage();
-
-      // Slide content up so the current page is visible
-      inner.style.transform = `translateY(-${i * contentHeight}px)`;
-      inner.style.margin = '0';
-
-      // Let the browser settle layout
-      await new Promise((r) => requestAnimationFrame(r));
-
-      const canvas = await html2canvas(clip, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
-
-      // Page number footer
-      pdf.setFontSize(8);
-      pdf.setTextColor(180, 180, 180);
-      pdf.text(`${i + 1} / ${numPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-    }
-
-    document.body.removeChild(wrapper);
-    document.body.removeChild(clip);
-    pdf.save(`${filename}.pdf`);
+      // Wait for images/fonts to settle, then print
+      setTimeout(() => {
+        w.focus();
+        w.print();  // blocks until user closes the print dialog
+        document.body.removeChild(iframe);
+        resolve();
+      }, 600);
+    });
   }
 
-  // Word Export — Proper .docx using the docx package
-  static async toDOCX(html: string, filename: string) {
-    const children = await ExportService.htmlToDocxChildren(html);
+  // ── Word — build proper .docx from TipTap JSON ──
+  static async toDOCX(json: TNode, filename: string) {
+    const children = ExportService.convertDoc(json.content || []);
     const doc = new Document({
       title: filename,
+      creator: 'CollabDocs',
+      description: `Exported from CollabDocs`,
       sections: [{ children }],
     });
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `${filename}.docx`);
   }
 
-  // --- HTML → DOCX conversion ---
-
-  private static async htmlToDocxChildren(html: string): Promise<(Paragraph | Table)[]> {
-    const body = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html').body;
-    const result: (Paragraph | Table)[] = [];
-    for (const node of body.childNodes) {
-      result.push(...await ExportService.convertNode(node));
+  // ── Convert TipTap nodes → docx Paragraph / Table ──
+  private static convertDoc(nodes: TNode[]): (Paragraph | Table)[] {
+    const out: (Paragraph | Table)[] = [];
+    for (const n of nodes) {
+      try {
+        const t = n.type || '';
+        switch (t) {
+          case 'paragraph':          out.push(ExportService.p(n)); break;
+          case 'heading':            out.push(ExportService.h(n)); break;
+          case 'bulletList':         out.push(...ExportService.ul(n)); break;
+          case 'orderedList':        out.push(...ExportService.ol(n)); break;
+          case 'taskList':           out.push(...ExportService.tl(n)); break;
+          case 'table':              out.push(ExportService.tbl(n)); break;
+          case 'blockquote':         out.push(ExportService.bq(n)); break;
+          case 'codeBlock':          out.push(ExportService.cb(n)); break;
+          case 'horizontalRule':     out.push(new Paragraph({ thematicBreak: true, spacing: { before: 200, after: 200 } })); break;
+          case 'image':              out.push(ExportService.img(n)); break;
+          case 'text':               /* handled inline */ break;
+          default:                   if (n.content) out.push(...ExportService.convertDoc(n.content)); break;
+        }
+      } catch (e) {
+        console.warn('Skipping unsupported node type:', n.type, e);
+      }
     }
-    return result;
+    return out;
   }
 
-  private static async convertNode(node: Node): Promise<(Paragraph | Table)[]> {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent?.trim();
-      return text ? [new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text })] })] : [];
+  // ── Build text runs from marks ──
+  private static tr(n: TNode): TextRun[] {
+    if (!n.text && !n.content) return [];
+    const text = n.text || n.content?.map(c => c.text || '').join('') || '';
+    if (!text) return [];
+    const marks = n.marks || [];
+    const opts: Record<string, any> = { text };
+
+    for (const m of marks) {
+      switch (m.type) {
+        case 'bold':           opts.bold = true; break;
+        case 'italic':         opts.italics = true; break;
+        case 'underline':      opts.underline = { type: 'single' }; break;
+        case 'strike':         opts.strike = true; break;
+        case 'code':           opts.font = 'Consolas'; opts.size = 20; break;
+        case 'link':           opts.color = '0563C1'; opts.underline = { type: 'single' }; break;
+        case 'highlight':      /* skip highlight in docx */ break;
+        case 'textStyle':      if (m.attrs?.color) opts.color = m.attrs.color; break;
+      }
     }
-    if (node.nodeType !== Node.ELEMENT_NODE) return [];
-    const el = node as HTMLElement;
-    const tag = el.tagName.toLowerCase();
-    switch (tag) {
-      case 'h1': return [ExportService.makeHeading(el, 1)];
-      case 'h2': return [ExportService.makeHeading(el, 2)];
-      case 'h3': return [ExportService.makeHeading(el, 3)];
-      case 'h4': return [ExportService.makeHeading(el, 4)];
-      case 'h5': return [ExportService.makeHeading(el, 5)];
-      case 'h6': return [ExportService.makeHeading(el, 6)];
-      case 'p': return [ExportService.makeParagraph(el)];
-      case 'ul': return ExportService.makeBulletList(el);
-      case 'ol': return ExportService.makeOrderedList(el);
-      case 'table': return [await ExportService.makeTable(el)];
-      case 'blockquote': return [ExportService.makeBlockquote(el)];
-      case 'pre': return [ExportService.makeCodeBlock(el)];
-      case 'hr': return [new Paragraph({ thematicBreak: true, spacing: { before: 200, after: 200 } })];
-      default: return [];
-    }
+    return [new TextRun(opts)];
   }
 
-  private static textRuns(el: HTMLElement): TextRun[] {
-    const runs: TextRun[] = [];
-    for (const node of el.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const t = node.textContent || '';
-        if (t) runs.push(new TextRun({ text: t }));
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const e = node as HTMLElement;
-        const tg = e.tagName.toLowerCase();
-        const txt = e.textContent || '';
-        switch (tg) {
-          case 'strong': case 'b':      if (txt) runs.push(new TextRun({ text: txt, bold: true })); break;
-          case 'em': case 'i':           if (txt) runs.push(new TextRun({ text: txt, italics: true })); break;
-          case 'u':                      if (txt) runs.push(new TextRun({ text: txt, underline: { type: 'single' } })); break;
-          case 's': case 'strike':       if (txt) runs.push(new TextRun({ text: txt, strike: true })); break;
-          case 'code':                   if (txt) runs.push(new TextRun({ text: txt, font: 'Consolas', size: 20 })); break;
-          case 'a':                      if (txt) runs.push(new TextRun({ text: txt, color: '0563C1', underline: { type: 'single' } })); break;
-          case 'br':                     runs.push(new TextRun({ break: 1 })); break;
-          case 'span': case 'mark': {
-            if (!txt) break;
-            const st = e.getAttribute('style') || '';
-            const c = st.match(/color:\s*(#[a-f0-9]+)/i)?.[1];
-            runs.push(new TextRun({ text: txt, color: c }));
-            break;
-          }
-          default:
-            if (txt) runs.push(...ExportService.textRuns(e));
+  // ── Inline content → TextRun[] ──
+  private static inline(nodes: TNode[] | undefined): TextRun[] {
+    if (!nodes) return [];
+    return nodes.flatMap(n => ExportService.tr(n));
+  }
+
+  // ── Paragraph ──
+  private static p(n: TNode): Paragraph {
+    return new Paragraph({ spacing: { after: 80 }, children: ExportService.inline(n.content) });
+  }
+
+  // ── Heading ──
+  private static h(n: TNode): Paragraph {
+    const lvl = n.attrs?.level ? Number(n.attrs.level) : 1;
+    const hh: any = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3, 4: HeadingLevel.HEADING_4, 5: HeadingLevel.HEADING_5, 6: HeadingLevel.HEADING_6 };
+    return new Paragraph({ heading: hh[lvl] || HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 }, children: ExportService.inline(n.content) });
+  }
+
+  // ── Bullet list ──
+  private static ul(n: TNode): Paragraph[] {
+    const out: Paragraph[] = [];
+    const items = n.content || [];
+    for (const li of items) {
+      const textRuns = ExportService.inline(li.content);
+      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: '\u2022  ' }), ...textRuns] }));
+      // Handle nested lists in list items
+      if (li.content) {
+        for (const child of li.content) {
+          if (child.type === 'bulletList') out.push(...ExportService.ul(child));
+          if (child.type === 'orderedList') out.push(...ExportService.ol(child));
         }
       }
     }
-    return runs;
+    return out;
   }
 
-  // --- Element builders ---
-
-  private static hlMap = {
-    1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3,
-    4: HeadingLevel.HEADING_4, 5: HeadingLevel.HEADING_5, 6: HeadingLevel.HEADING_6,
-  };
-
-  private static makeHeading(el: HTMLElement, level: number): Paragraph {
-    return new Paragraph({
-      heading: (ExportService.hlMap as any)[level],
-      spacing: { before: 240, after: 120 },
-      children: ExportService.textRuns(el),
-    });
-  }
-
-  private static makeParagraph(el: HTMLElement): Paragraph {
-    return new Paragraph({
-      spacing: { after: 80 },
-      children: ExportService.textRuns(el),
-    });
-  }
-
-  private static makeBulletList(el: HTMLElement): Paragraph[] {
-    const items: Paragraph[] = [];
-    for (const child of el.children) {
-      if (child.tagName.toLowerCase() === 'li') {
-        items.push(new Paragraph({
-          spacing: { after: 40 },
-          indent: { left: 720 },
-          children: [new TextRun({ text: '\u2022  ' }), ...ExportService.textRuns(child as HTMLElement)],
-        }));
-      }
-    }
-    return items;
-  }
-
-  private static makeOrderedList(el: HTMLElement): Paragraph[] {
-    const items: Paragraph[] = [];
+  // ── Ordered list ──
+  private static ol(n: TNode): Paragraph[] {
+    const out: Paragraph[] = [];
+    const items = n.content || [];
     let idx = 1;
-    for (const child of el.children) {
-      if (child.tagName.toLowerCase() === 'li') {
-        items.push(new Paragraph({
-          spacing: { after: 40 },
-          indent: { left: 720 },
-          children: [new TextRun({ text: `${idx}.  ` }), ...ExportService.textRuns(child as HTMLElement)],
-        }));
-        idx++;
+    for (const li of items) {
+      const textRuns = ExportService.inline(li.content);
+      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: `${idx}.  ` }), ...textRuns] }));
+      idx++;
+      if (li.content) {
+        for (const child of li.content) {
+          if (child.type === 'bulletList') out.push(...ExportService.ul(child));
+          if (child.type === 'orderedList') out.push(...ExportService.ol(child));
+        }
       }
     }
-    return items;
+    return out;
   }
 
-  private static async makeTable(el: HTMLElement): Promise<Table> {
+  // ── Task list ──
+  private static tl(n: TNode): Paragraph[] {
+    const out: Paragraph[] = [];
+    const items = n.content || [];
+    for (const li of items) {
+      const checked = li.attrs?.checked;
+      const prefix = checked ? '\u2611  ' : '\u2610  ';
+      const textRuns = ExportService.inline(li.content);
+      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: prefix }), ...textRuns] }));
+    }
+    return out;
+  }
+
+  // ── Table ──
+  private static tbl(n: TNode): Table {
     const rows: TableRow[] = [];
-    for (const tr of el.children) {
-      if (tr.tagName.toLowerCase() !== 'tr') continue;
+    const tbody = n.content || [];
+    for (const trNode of tbody) {
       const cells: TableCell[] = [];
-      for (const td of tr.children) {
-        const tag = td.tagName.toLowerCase();
-        if (tag !== 'td' && tag !== 'th') continue;
-        const pars: Paragraph[] = [];
-        for (const child of td.childNodes) {
-          for (const item of await ExportService.convertNode(child)) {
-            if (item instanceof Paragraph) pars.push(item);
-          }
-        }
+      const tds = trNode.content || [];
+      for (const tdNode of tds) {
+        const pars: Paragraph[] = ExportService.convertDoc(tdNode.content || []) as Paragraph[];
         if (!pars.length) pars.push(new Paragraph({ children: [new TextRun({ text: '' })] }));
-        const isH = tag === 'th';
+          const isH = tdNode.type === 'tableHeader' || tdNode.type === 'th';
         cells.push(new TableCell({
-          children: pars,
+          children: pars.filter(p => p instanceof Paragraph),
           ...(isH ? { shading: { type: 'clear', fill: 'f2f2f2' } as any } : {}),
         }));
       }
@@ -234,47 +206,44 @@ export class ExportService {
     return new Table({ rows });
   }
 
-  private static makeBlockquote(el: HTMLElement): Paragraph {
-    return new Paragraph({
-      spacing: { before: 120, after: 120 },
-      indent: { left: ExportService.inchToTwip(0.5) },
-      children: ExportService.textRuns(el),
-    });
+  // ── Blockquote ──
+  private static bq(n: TNode): Paragraph {
+    return new Paragraph({ spacing: { before: 120, after: 120 }, indent: { left: ExportService.twip(0.5) }, children: ExportService.inline(n.content) });
   }
 
-  private static makeCodeBlock(el: HTMLElement): Paragraph {
+  // ── Code block ──
+  private static cb(n: TNode): Paragraph {
+    const text = n.content?.map(c => c.text || '').join('\n') || '';
+    return new Paragraph({ spacing: { before: 80, after: 80 }, indent: { left: ExportService.twip(0.3) }, children: [new TextRun({ text, font: 'Consolas', size: 18 })] });
+  }
+
+  // ── Image — placeholder paragraph ──
+  private static img(n: TNode): Paragraph {
+    const alt = n.attrs?.alt || 'image';
+    const src = n.attrs?.src || '';
     return new Paragraph({
       spacing: { before: 80, after: 80 },
-      indent: { left: ExportService.inchToTwip(0.3) },
-      children: [new TextRun({ text: el.textContent || '', font: 'Consolas', size: 18 })],
+      children: [
+        new TextRun({ text: `[Image: ${alt}]`, italics: true, color: '888888' }),
+        ...(src ? [new TextRun({ text: ` (${src})`, size: 16, color: 'aaaaaa' })] : []),
+      ],
     });
   }
 
-  private static inchToTwip(inches: number): number {
-    return Math.round(inches * 1440);
-  }
+  // ── Helpers ──
+  private static twip(inches: number) { return Math.round(inches * 1440); }
 
-  // --- Markdown ---
+  // ── Markdown ──
   static toMarkdown(html: string, filename: string) {
-    const md = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', emDelimiter: '*' }).turndown(html);
-    saveAs(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
+    saveAs(new Blob([new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', emDelimiter: '*' }).turndown(html)], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
   }
 
-  // --- HTML ---
+  // ── HTML ──
   static toHTML(html: string, filename: string) {
-    saveAs(new Blob([`<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${filename}</title><style>
-body{font-family:system-ui,-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}
-h1{font-size:2em;margin-top:1.5em} h2{font-size:1.5em;margin-top:1.3em} h3{font-size:1.25em;margin-top:1.1em}
-table{border-collapse:collapse;width:100%;margin:1em 0} td,th{border:1px solid #ddd;padding:8px;text-align:left} th{background:#f5f5f5}
-img{max-width:100%;height:auto} pre{background:#f5f5f5;padding:15px;border-radius:8px;overflow-x:auto}
-code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.9em}
-blockquote{border-left:4px solid #3b82f6;padding-left:16px;margin:1em 0;color:#666}
-</style></head><body>${html}</body></html>`], { type: 'text/html;charset=utf-8' }), `${filename}.html`);
+    saveAs(new Blob([`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${filename}</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}h1{font-size:2em;margin-top:1.5em}h2{font-size:1.5em;margin-top:1.3em}h3{font-size:1.25em;margin-top:1.1em}table{border-collapse:collapse;width:100%;margin:1em 0}td,th{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}img{max-width:100%;height:auto}pre{background:#f5f5f5;padding:15px;border-radius:8px;overflow-x:auto}code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.9em}blockquote{border-left:4px solid #3b82f6;padding-left:16px;margin:1em 0;color:#666}</style></head><body>${html}</body></html>`], { type: 'text/html;charset=utf-8' }), `${filename}.html`);
   }
 
-  // --- Plain Text ---
+  // ── Text ──
   static toText(text: string, filename: string) {
     saveAs(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}.txt`);
   }

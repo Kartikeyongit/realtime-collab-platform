@@ -42,22 +42,24 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
       switch (format) {
         case 'pdf': {
           if (exportSelectionOnly && editor && !editor.state.selection.empty) {
-            const selText = getSelectionHtml();
-            if (selText) {
-              const tempEl = document.createElement('div');
-              tempEl.style.cssText = 'padding: 20px; font-family: system-ui, sans-serif; line-height: 1.6; position: absolute; left: -9999px; top: 0;';
-              tempEl.textContent = selText;
-              document.body.appendChild(tempEl);
-              await ExportService.toPDF(tempEl, documentTitle + ' (Selection)');
-              document.body.removeChild(tempEl);
-            }
+            const selText = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to, '\n');
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = 'padding: 20px; font-family: system-ui, sans-serif; line-height: 1.6;';
+            tempDiv.textContent = selText;
+            document.body.appendChild(tempDiv);
+            await ExportService.toPDF(tempDiv, documentTitle + ' (Selection)');
+            document.body.removeChild(tempDiv);
           } else {
             const el = document.querySelector('.ProseMirror') as HTMLElement;
             if (el) await ExportService.toPDF(el, documentTitle);
           }
           break;
         }
-        case 'docx': await ExportService.toDOCX(content, documentTitle); break;
+        case 'docx': {
+          if (!editor) { addToast('Editor not ready', 'error'); break; }
+          await ExportService.toDOCX(editor.getJSON(), documentTitle);
+          break;
+        }
         case 'markdown': ExportService.toMarkdown(content, documentTitle); break;
         case 'html': ExportService.toHTML(content, documentTitle); break;
         case 'txt': {
@@ -67,8 +69,10 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
           break;
         }
       }
-      addToast(`${exportSelectionOnly ? 'Selection' : 'Document'} exported!`, 'success');
-      onClose();
+      if (format !== 'pdf') {
+        addToast(`${exportSelectionOnly ? 'Selection' : 'Document'} exported!`, 'success');
+        onClose();
+      }
     } catch { addToast('Export failed', 'error'); }
     finally { setExporting(null); }
   };
