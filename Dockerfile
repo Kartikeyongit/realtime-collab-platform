@@ -22,13 +22,11 @@ ENV DOCKER=1
 RUN npm run build
 
 FROM base AS runner
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
 
 # Next.js standalone output
 COPY --from=builder /app/.next/standalone ./
@@ -47,9 +45,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=deps /app/node_modules ./node_modules
 
 # Yjs persistence dir
-RUN mkdir -p yjs-data
-
-USER nextjs
+RUN mkdir -p yjs-data && chmod 777 yjs-data
 
 EXPOSE 3000 3001 1234
 
