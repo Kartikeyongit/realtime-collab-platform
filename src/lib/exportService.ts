@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 import TurndownService from 'turndown';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, ImageRun } from 'docx';
 
 // TipTap JSON node shape
 interface TNode {
@@ -56,7 +56,7 @@ export class ExportService {
 
   // ── Word — build proper .docx from TipTap JSON ──
   static async toDOCX(json: TNode, filename: string) {
-    const children = ExportService.convertDoc(json.content || []);
+    const children = await ExportService.convertDoc(json.content || []);
     const doc = new Document({
       title: filename,
       creator: 'CollabDocs',
@@ -68,7 +68,7 @@ export class ExportService {
   }
 
   // ── Convert TipTap nodes → docx Paragraph / Table ──
-  private static convertDoc(nodes: TNode[]): (Paragraph | Table)[] {
+  private static async convertDoc(nodes: TNode[]): Promise<(Paragraph | Table)[]> {
     const out: (Paragraph | Table)[] = [];
     for (const n of nodes) {
       try {
@@ -79,13 +79,13 @@ export class ExportService {
           case 'bulletList':         out.push(...ExportService.ul(n)); break;
           case 'orderedList':        out.push(...ExportService.ol(n)); break;
           case 'taskList':           out.push(...ExportService.tl(n)); break;
-          case 'table':              out.push(ExportService.tbl(n)); break;
+          case 'table':              out.push(await ExportService.tbl(n)); break;
           case 'blockquote':         out.push(ExportService.bq(n)); break;
           case 'codeBlock':          out.push(ExportService.cb(n)); break;
           case 'horizontalRule':     out.push(new Paragraph({ thematicBreak: true, spacing: { before: 200, after: 200 } })); break;
-          case 'image':              out.push(ExportService.img(n)); break;
+          case 'image':              out.push(await ExportService.img(n)); break;
           case 'text':               /* handled inline */ break;
-          default:                   if (n.content) out.push(...ExportService.convertDoc(n.content)); break;
+          default:                   if (n.content) out.push(...await ExportService.convertDoc(n.content)); break;
         }
       } catch (e) {
         console.warn('Skipping unsupported node type:', n.type, e);
@@ -186,18 +186,19 @@ export class ExportService {
   }
 
   // ── Table ──
-  private static tbl(n: TNode): Table {
+  private static async tbl(n: TNode): Promise<Table> {
     const rows: TableRow[] = [];
     const tbody = n.content || [];
     for (const trNode of tbody) {
       const cells: TableCell[] = [];
       const tds = trNode.content || [];
       for (const tdNode of tds) {
-        const pars: Paragraph[] = ExportService.convertDoc(tdNode.content || []) as Paragraph[];
+        const cellItems = await ExportService.convertDoc(tdNode.content || []);
+        const pars = cellItems.filter(p => p instanceof Paragraph) as Paragraph[];
         if (!pars.length) pars.push(new Paragraph({ children: [new TextRun({ text: '' })] }));
-          const isH = tdNode.type === 'tableHeader' || tdNode.type === 'th';
+        const isH = tdNode.type === 'tableHeader' || tdNode.type === 'th';
         cells.push(new TableCell({
-          children: pars.filter(p => p instanceof Paragraph),
+          children: pars,
           ...(isH ? { shading: { type: 'clear', fill: 'f2f2f2' } as any } : {}),
         }));
       }
@@ -217,17 +218,54 @@ export class ExportService {
     return new Paragraph({ spacing: { before: 80, after: 80 }, indent: { left: ExportService.twip(0.3) }, children: [new TextRun({ text, font: 'Consolas', size: 18 })] });
   }
 
-  // ── Image — placeholder paragraph ──
-  private static img(n: TNode): Paragraph {
-    const alt = n.attrs?.alt || 'image';
+  // ── Image — fetch and embed in docx ──
+  private static async img(n: TNode): Promise<Paragraph> {
     const src = n.attrs?.src || '';
-    return new Paragraph({
-      spacing: { before: 80, after: 80 },
-      children: [
-        new TextRun({ text: `[Image: ${alt}]`, italics: true, color: '888888' }),
-        ...(src ? [new TextRun({ text: ` (${src})`, size: 16, color: 'aaaaaa' })] : []),
-      ],
-    });
+    const alt = n.attrs?.alt || '';
+    const w = n.attrs?.width ? Number(n.attrs.width) : 400;
+    const h = n.attrs?.height ? Number(n.attrs.height) : 300;
+
+    if (!src) {
+      return new Paragraph({ children: [new TextRun({ text: alt || '[Image]', italics: true, color: '888888' })] });
+    }
+
+    try {
+      const response = await fetch(src);
+      if (!response.ok) throw new Error('Fetch failed');
+      const data = await response.arrayBuffer();
+
+      const type = ExportService.imageType(src);
+      return new Paragraph({
+        spacing: { before: 80, after: 80 },
+        children: [
+          new ImageRun({
+            data,
+            transformation: { width: w, height: h },
+            type,
+          } as any),
+        ],
+      });
+    } catch {
+      return new Paragraph({
+        spacing: { before: 80, after: 80 },
+        children: [new TextRun({ text: `[Image${alt ? ': ' + alt : ''}]`, italics: true, color: '888888' })],
+      });
+    }
+  }
+
+  private static imageType(src: string): 'png' | 'jpg' | 'gif' | 'bmp' | 'svg' {
+    if (src.startsWith('data:image/png')) return 'png';
+    if (src.startsWith('data:image/jpeg') || src.startsWith('data:image/jpg')) return 'jpg';
+    if (src.startsWith('data:image/gif')) return 'gif';
+    if (src.startsWith('data:image/webp')) return 'png';
+    const m = src.match(/\.(png|jpe?g|gif|webp)($|\?)/i);
+    if (m) {
+      if (m[1] === 'jpg' || m[1] === 'jpeg') return 'jpg';
+      if (m[1] === 'webp') return 'png';
+      if (m[1] === 'png') return 'png';
+      if (m[1] === 'gif') return 'gif';
+    }
+    return 'png';
   }
 
   // ── Helpers ──
