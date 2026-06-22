@@ -133,16 +133,13 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
       },
       onCreate: ({ editor: ed }) => {
         editorRef.current = ed;
+        if (initialContent && !initialContentLoaded.current) {
+          initialContentLoaded.current = true;
+          ed.commands.setContent(initialContent);
+        }
         onEditorReady?.(ed);
       },
     }, [extensions]);
-
-    // Load initial content from DB into Y.Doc once
-    useEffect(() => {
-      if (!editorRef.current || !initialContent || initialContentLoaded.current) return;
-      initialContentLoaded.current = true;
-      editorRef.current.commands.setContent(initialContent);
-    }, [initialContent]);
 
     useEffect(() => {
       onConnectionChange?.(connected);
