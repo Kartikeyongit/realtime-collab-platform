@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 import TurndownService from 'turndown';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, ImageRun } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, ImageRun, ExternalHyperlink } from 'docx';
 
 // TipTap JSON node shape
 interface TNode {
@@ -11,7 +11,7 @@ interface TNode {
   attrs?: Record<string, any>;
 }
 
-type ParaChild = TextRun | ImageRun;
+type ParaChild = TextRun | ImageRun | ExternalHyperlink;
 
 export class ExportService {
   // ── PDF — uses browser native print ──
@@ -88,68 +88,94 @@ export class ExportService {
     return out;
   }
 
-  // ── Fetch image data — handles data URLs directly, falls back to fetch for remote ──
+  // ── Fetch image data — data URLs decoded directly, remote URLs via fetch + proxy fallback ──
   private static async fetchImage(src: string): Promise<{ data: ArrayBuffer; type: 'png' | 'jpg' | 'gif' | 'bmp' | 'svg' } | null> {
+    if (src.startsWith('data:')) {
+      const result = ExportService.decodeDataUrl(src);
+      if (result) return result;
+      console.warn('[DOCX] Failed to decode data URL (length=' + src.length + ')');
+      return null;
+    }
     try {
-      if (src.startsWith('data:')) {
-        const data = ExportService.dataUrlToArrayBuffer(src);
-        if (!data) return null;
-        const type = ExportService.imageType(src);
-        return { data, type };
-      }
       const r = await fetch(src, { mode: 'cors' });
+      if (r.ok) {
+        const data = await r.arrayBuffer();
+        return { data, type: ExportService.imageType(src) };
+      }
+    } catch {}
+    try {
+      const r = await fetch('/api/image-proxy?url=' + encodeURIComponent(src));
       if (!r.ok) return null;
       const data = await r.arrayBuffer();
-      const type = ExportService.imageType(src);
+      const ct = r.headers.get('Content-Type') || '';
+      const type = ct.includes('png') ? 'png' : ct.includes('jpeg') ? 'jpg' : ct.includes('gif') ? 'gif' : ct.includes('bmp') ? 'bmp' : ct.includes('svg') ? 'svg' : ExportService.imageType(src);
       return { data, type };
-    } catch { return null; }
+    } catch (e) {
+      console.warn('[DOCX] Both direct fetch and proxy failed for ' + src, e);
+      return null;
+    }
   }
 
   // ── Decode a data URL to ArrayBuffer without fetch ──
-  private static dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer | null {
+  private static decodeDataUrl(dataUrl: string): { data: ArrayBuffer; type: 'png' | 'jpg' | 'gif' | 'bmp' | 'svg' } | null {
     try {
       const comma = dataUrl.indexOf(',');
       if (comma === -1) return null;
-      const raw = dataUrl.slice(comma + 1);
-      const binary = atob(raw);
+      const meta = dataUrl.slice(0, comma);
+      const raw = dataUrl.slice(comma + 1).replace(/\s/g, '');
+      const decoded = raw.includes('%25') || (raw.includes('%') && !raw.match(/^[A-Za-z0-9+/=]+$/)) ? decodeURIComponent(raw) : raw;
+      const binary = atob(decoded);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) {
         bytes[i] = binary.charCodeAt(i);
       }
-      return bytes.buffer;
-    } catch { return null; }
+      const type = meta.includes('image/png') ? 'png'
+        : meta.includes('image/jpeg') || meta.includes('image/jpg') ? 'jpg'
+        : meta.includes('image/gif') ? 'gif'
+        : meta.includes('image/bmp') ? 'bmp'
+        : meta.includes('image/svg') ? 'svg'
+        : meta.includes('image/webp') ? 'png'
+        : ExportService.imageType(dataUrl);
+      return { data: bytes.buffer, type };
+    } catch (e) {
+      console.warn('[DOCX] decodeDataUrl failed:', e);
+      return null;
+    }
   }
 
-  // ── ImageRun builder ──
-  private static async imgRun(n: TNode): Promise<ParaChild | null> {
+  // ── ImageRun builder — returns ImageRun or ExternalHyperlink fallback ──
+  private static async imgRun(n: TNode): Promise<ParaChild> {
     const src = n.attrs?.src || '';
-    if (!src) return null;
+    const alt = n.attrs?.alt || '';
+    if (!src) return new TextRun({ text: alt || '[Image]', italics: true, color: '888888' });
     const w = n.attrs?.width ? Number(n.attrs.width) : 300;
     const h = n.attrs?.height ? Number(n.attrs.height) : 200;
     const img = await ExportService.fetchImage(src);
-    if (!img) return null;
-    return new ImageRun({ data: img.data, transformation: { width: w, height: h }, type: img.type } as any);
+    if (img) {
+      return new ImageRun({ data: img.data, transformation: { width: w, height: h }, type: img.type } as any);
+    }
+    return new ExternalHyperlink({
+      children: [new TextRun({ text: alt || 'Click to view image', style: 'Hyperlink' })],
+      link: src,
+    });
   }
 
   // ── Block-level image (own paragraph) ──
   private static async imgBlock(n: TNode): Promise<Paragraph> {
-    const alt = n.attrs?.alt || '';
     const run = await ExportService.imgRun(n);
     if (run instanceof ImageRun) {
       return new Paragraph({ spacing: { before: 80, after: 80 }, children: [run] });
     }
-    return new Paragraph({ children: [new TextRun({ text: `[Image${alt ? ': ' + alt : ''}]`, italics: true, color: '888888' })] });
+    return new Paragraph({ spacing: { before: 80, after: 80 }, children: [run] });
   }
 
-  // ── Build paragraph children (TextRun + inline ImageRun) ──
+  // ── Build paragraph children (TextRun + inline ImageRun + ExternalHyperlink) ──
   private static async inline(nodes: TNode[] | undefined): Promise<ParaChild[]> {
     if (!nodes) return [];
     const out: ParaChild[] = [];
     for (const n of nodes) {
       if (n.type === 'image') {
-        const run = await ExportService.imgRun(n);
-        if (run) out.push(run);
-        else out.push(new TextRun({ text: '[Image]', italics: true, color: '888888' }));
+        out.push(await ExportService.imgRun(n));
       } else {
         out.push(...ExportService.tr(n));
       }
