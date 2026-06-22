@@ -14,6 +14,7 @@ export function useYjsCollaboration(documentId: string) {
   const [connected, setConnected] = useState(false);
   const [synced, setSynced] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [tokenReady, setTokenReady] = useState<'loading' | 'available' | 'unavailable'>('loading');
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -22,9 +23,14 @@ export function useYjsCollaboration(documentId: string) {
     const fetchToken = async () => {
       try {
         const { data } = await axios.get(`/api/auth/ws-token?documentId=${documentId}`);
-        if (!cancelled) setToken(data.token);
+        if (!cancelled) {
+          setToken(data.token);
+          setTokenReady('available');
+        }
       } catch {
-        // User is not authenticated; no collaboration
+        if (!cancelled) {
+          setTokenReady('unavailable');
+        }
       }
     };
 
@@ -68,8 +74,10 @@ export function useYjsCollaboration(documentId: string) {
 
   // Force synced after timeout so content loads from REST API even if Yjs unavailable
   useEffect(() => {
-    if (!token) {
-      // No token means no Yjs at all — mark synced immediately so REST API content loads
+    if (tokenReady === 'loading') return;
+
+    if (tokenReady === 'unavailable') {
+      // No token means no Yjs at all — mark synced so REST API content loads
       setSynced(true);
       return;
     }
@@ -84,7 +92,7 @@ export function useYjsCollaboration(documentId: string) {
         syncTimeoutRef.current = null;
       }
     };
-  }, [token]);
+  }, [tokenReady]);
 
   useEffect(() => {
     if (!provider) return;
