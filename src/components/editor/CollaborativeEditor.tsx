@@ -29,6 +29,7 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     const editorRef = useRef<Editor | null>(null);
     const documentIdRef = useRef(documentId);
     documentIdRef.current = documentId;
+    const initialContentLoaded = useRef(false);
     const { yDoc, provider, awareness, connected, synced, isEmpty, userInfo } = useYjsCollaboration(documentId);
 
     const isDirtyRef = useRef(false);
@@ -136,13 +137,12 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
       },
     }, [extensions]);
 
-    // Load initial content from DB into Y.Doc if the Y.Doc is empty
+    // Load initial content from DB into Y.Doc once
     useEffect(() => {
-      if (!editorRef.current) return;
-      if (initialContent && isEmpty) {
-        editorRef.current.commands.setContent(initialContent);
-      }
-    }, [initialContent, isEmpty]);
+      if (!editorRef.current || !initialContent || initialContentLoaded.current) return;
+      initialContentLoaded.current = true;
+      editorRef.current.commands.setContent(initialContent);
+    }, [initialContent]);
 
     useEffect(() => {
       onConnectionChange?.(connected);
