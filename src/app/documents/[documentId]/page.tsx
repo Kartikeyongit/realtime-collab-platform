@@ -16,7 +16,6 @@ import { AIAssistant } from '@/components/ai/AIAssistant';
 import { ShareDialog } from '@/components/share/ShareDialog';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { useDocumentStore } from '@/store/documentStore';
-import type { Comment } from '@/types';
 import { InlineRename } from '@/components/ui/InlineRename';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { toast } from 'react-hot-toast';
@@ -56,7 +55,7 @@ export default function DocumentPage() {
   const wasEverConnected = useRef(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'live' | 'reconnecting' | 'offline'>('connecting');
 
-  useCollaboration(documentId);
+  const { emitComment } = useCollaboration(documentId);
   useEffect(() => { fetchDocument(); }, [documentId]);
   useEffect(() => { return () => { reset(); }; }, [documentId]);
   useEffect(() => {
@@ -233,6 +232,7 @@ export default function DocumentPage() {
             comments={document?.comments || []} 
             documentId={documentId}
             editor={editorInstance}
+            emitComment={emitComment}
             onResolve={async (id) => { 
               await axios.patch(`/api/documents/${documentId}/comments/${id}`, { resolved: true }); 
               const updatedComments = (document?.comments || []).map(c => 
@@ -244,19 +244,6 @@ export default function DocumentPage() {
               await axios.delete(`/api/documents/${documentId}/comments/${id}`); 
               const filteredComments = (document?.comments || []).filter(c => c.id !== id);
               if (document) setDocument({ ...document, comments: filteredComments });
-            }}
-            onCommentAdded={(newComment: any) => {
-              if (!document) return;
-              if (newComment.parentId) {
-                const updatedComments = (document.comments || []).map(c =>
-                  c.id === newComment.parentId
-                    ? { ...c, replies: [...(c.replies || []), newComment] }
-                    : c
-                ) as Comment[];
-                setDocument({ ...document, comments: updatedComments });
-              } else {
-                setDocument({ ...document, comments: [newComment, ...(document.comments || [])] as Comment[] });
-              }
             }}
             addToast={addToast}
           />

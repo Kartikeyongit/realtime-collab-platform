@@ -17,6 +17,7 @@ interface DocumentState {
   removePresence: (userId: string) => void;
   addComment: (comment: Comment) => void;
   updateComment: (commentId: string, updates: Partial<Comment>) => void;
+  removeComment: (commentId: string) => void;
   updateCursor: (userId: string, data: any) => void;
   setConnected: (connected: boolean) => void;
   reset: () => void;
@@ -48,6 +49,16 @@ export const useDocumentStore = create<DocumentState>()(
     addComment: (comment) =>
       set((state) => {
         state.comments.push(comment);
+        if (state.document) {
+          if (comment.parentId) {
+            const parent = state.document.comments?.find((c) => c.id === comment.parentId);
+            if (parent) {
+              parent.replies = [...(parent.replies || []), comment];
+            }
+          } else {
+            state.document.comments = [comment, ...(state.document.comments || [])];
+          }
+        }
       }),
     
     updateComment: (commentId, updates) =>
@@ -55,6 +66,20 @@ export const useDocumentStore = create<DocumentState>()(
         const idx = state.comments.findIndex((c) => c.id === commentId);
         if (idx !== -1) {
           Object.assign(state.comments[idx], updates);
+        }
+        if (state.document) {
+          const docIdx = state.document.comments?.findIndex((c) => c.id === commentId);
+          if (docIdx !== undefined && docIdx !== -1) {
+            Object.assign(state.document.comments![docIdx], updates);
+          }
+        }
+      }),
+
+    removeComment: (commentId) =>
+      set((state) => {
+        state.comments = state.comments.filter((c) => c.id !== commentId);
+        if (state.document) {
+          state.document.comments = state.document.comments?.filter((c) => c.id !== commentId);
         }
       }),
 

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Reply, Trash2, Check, Send } from 'lucide-react';
-import axios from 'axios';
 import type { Editor } from '@tiptap/react';
 
 interface Comment {
@@ -24,16 +23,15 @@ interface CommentThreadProps {
   onDelete?: (id: string) => void;
   documentId?: string;
   editor?: Editor | null;
-  onCommentAdded?: (comment: Comment) => void;
+  emitComment?: (comment: any) => void;
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-export function CommentThread({ comments, onResolve, onDelete, documentId, editor, onCommentAdded, addToast }: CommentThreadProps) {
+export function CommentThread({ comments, onResolve, onDelete, documentId, editor, emitComment, addToast }: CommentThreadProps) {
   const { data: session } = useSession();
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [addingComment, setAddingComment] = useState(false);
 
   const getSelectionPosition = () => {
     if (!editor) return {};
@@ -42,28 +40,15 @@ export function CommentThread({ comments, onResolve, onDelete, documentId, edito
     return { from, to };
   };
 
-  const handleAddComment = async () => {
+  const handleAddComment = () => {
     if (!newComment.trim() || !documentId) return;
-    setAddingComment(true);
-    try {
-      const response = await axios.post(`/api/documents/${documentId}/comments`, {
-        content: newComment.trim(),
-        position: getSelectionPosition(),
-      });
-
-      const newCommentObj: Comment = {
-        ...response.data,
-        replies: [],
-      };
-
-      onCommentAdded?.(newCommentObj);
-      setNewComment('');
-      addToast?.('Comment added', 'success');
-    } catch {
-      addToast?.('Failed to add comment', 'error');
-    } finally {
-      setAddingComment(false);
-    }
+    emitComment?.({
+      documentId,
+      content: newComment.trim(),
+      position: getSelectionPosition(),
+    });
+    setNewComment('');
+    addToast?.('Comment added', 'success');
   };
 
   const handleResolve = (id: string) => {
@@ -101,9 +86,9 @@ export function CommentThread({ comments, onResolve, onDelete, documentId, edito
             />
             {newComment.trim() && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                <button onClick={handleAddComment} disabled={addingComment} className="btn btn-primary btn-sm" style={{ padding: '5px 12px', fontSize: '12px' }}>
+                <button onClick={handleAddComment} className="btn btn-primary btn-sm" style={{ padding: '5px 12px', fontSize: '12px' }}>
                   <Send size={12} style={{ marginRight: '4px' }} />
-                  {addingComment ? 'Sending...' : 'Comment'}
+                  Comment
                 </button>
               </div>
             )}
@@ -158,34 +143,28 @@ export function CommentThread({ comments, onResolve, onDelete, documentId, edito
                       placeholder="Write a reply..."
                       className="input"
                       style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '8px' }}
-                      onKeyDown={async (e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter' && replyText.trim()) {
                           e.preventDefault();
-                          try {
-                            const response = await axios.post(`/api/documents/${documentId}/comments`, {
-                              content: replyText.trim(),
-                              parentId: comment.id,
-                            });
-                            const reply: Comment = { ...response.data, replies: [] };
-                            onCommentAdded?.(reply);
-                            setReplyText('');
-                            setReplyTo(null);
-                          } catch { addToast?.('Failed to add reply', 'error'); }
+                          emitComment?.({
+                            documentId,
+                            content: replyText.trim(),
+                            parentId: comment.id,
+                          });
+                          setReplyText('');
+                          setReplyTo(null);
                         }
                       }}
                     />
-                    <button onClick={async () => {
+                    <button onClick={() => {
                       if (!replyText.trim()) return;
-                      try {
-                        const response = await axios.post(`/api/documents/${documentId}/comments`, {
-                          content: replyText.trim(),
-                          parentId: comment.id,
-                        });
-                        const reply: Comment = { ...response.data, replies: [] };
-                        onCommentAdded?.(reply);
-                        setReplyText('');
-                        setReplyTo(null);
-                      } catch { addToast?.('Failed to add reply', 'error'); }
+                      emitComment?.({
+                        documentId,
+                        content: replyText.trim(),
+                        parentId: comment.id,
+                      });
+                      setReplyText('');
+                      setReplyTo(null);
                     }} className="btn btn-primary btn-sm" style={{ padding: '5px 8px', fontSize: '11px' }}>Reply</button>
                   </div>
                 )}
