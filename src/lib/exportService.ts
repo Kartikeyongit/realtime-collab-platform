@@ -88,14 +88,35 @@ export class ExportService {
     return out;
   }
 
-  // ── Fetch image data — works for data URLs and CORS-enabled remote URLs ──
+  // ── Fetch image data — handles data URLs directly, falls back to fetch for remote ──
   private static async fetchImage(src: string): Promise<{ data: ArrayBuffer; type: 'png' | 'jpg' | 'gif' | 'bmp' | 'svg' } | null> {
     try {
-      const r = await fetch(src);
+      if (src.startsWith('data:')) {
+        const data = ExportService.dataUrlToArrayBuffer(src);
+        if (!data) return null;
+        const type = ExportService.imageType(src);
+        return { data, type };
+      }
+      const r = await fetch(src, { mode: 'cors' });
       if (!r.ok) return null;
       const data = await r.arrayBuffer();
       const type = ExportService.imageType(src);
       return { data, type };
+    } catch { return null; }
+  }
+
+  // ── Decode a data URL to ArrayBuffer without fetch ──
+  private static dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer | null {
+    try {
+      const comma = dataUrl.indexOf(',');
+      if (comma === -1) return null;
+      const raw = dataUrl.slice(comma + 1);
+      const binary = atob(raw);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
     } catch { return null; }
   }
 
@@ -247,10 +268,14 @@ export class ExportService {
     if (src.startsWith('data:image/jpeg') || src.startsWith('data:image/jpg')) return 'jpg';
     if (src.startsWith('data:image/gif')) return 'gif';
     if (src.startsWith('data:image/webp')) return 'png';
-    const m = src.match(/\.(png|jpe?g|gif|webp)($|\?)/i);
+    if (src.startsWith('data:image/bmp')) return 'bmp';
+    if (src.startsWith('data:image/svg+xml')) return 'svg';
+    const m = src.match(/\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i);
     if (m) {
       if (m[1] === 'jpg' || m[1] === 'jpeg') return 'jpg';
       if (m[1] === 'webp') return 'png';
+      if (m[1] === 'bmp') return 'bmp';
+      if (m[1] === 'svg') return 'svg';
       if (m[1] === 'png') return 'png';
       if (m[1] === 'gif') return 'gif';
     }
