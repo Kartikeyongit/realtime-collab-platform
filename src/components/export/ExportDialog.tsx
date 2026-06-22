@@ -57,7 +57,7 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
           }
           break;
         }
-        case 'docx': await ExportService.toDOCXFromHTML(content, documentTitle); break;
+        case 'docx': await ExportService.toDOCX(content, documentTitle); break;
         case 'markdown': ExportService.toMarkdown(content, documentTitle); break;
         case 'html': ExportService.toHTML(content, documentTitle); break;
         case 'txt': {
@@ -75,7 +75,7 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
 
   const formats = [
     { id: 'pdf', name: 'PDF', icon: FileText, desc: 'Best for sharing', color: '#ef4444' },
-    { id: 'docx', name: 'Word', icon: FileType, desc: 'Editable document', color: '#3b82f6' },
+    { id: 'docx', name: 'Word', icon: FileType, desc: 'True .docx format', color: '#217346' },
     { id: 'markdown', name: 'Markdown', icon: FileCode, desc: 'Text with formatting', color: '#8b5cf6' },
     { id: 'html', name: 'HTML', icon: Globe, desc: 'Web page', color: '#f97316' },
     { id: 'txt', name: 'Text', icon: FileText, desc: 'Plain text', color: '#78716c' },
