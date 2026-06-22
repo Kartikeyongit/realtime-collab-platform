@@ -62,7 +62,7 @@ function startProcess(name, command, args, opts = {}) {
 `);
 
   startProcess('next', 'node', [path.join(ROOT, 'server.js')], {
-    env: { PORT },
+    env: { PORT, HOSTNAME: '0.0.0.0' },
   });
 
   startProcess('socket', 'node', [path.join(ROOT, 'dist-server', 'index.js')], {
