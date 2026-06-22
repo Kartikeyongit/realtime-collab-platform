@@ -1,9 +1,17 @@
 {
-  "extends": "./tsconfig.server.json",
   "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
     "outDir": "dist-server",
     "rootDir": "src/server",
-    "sourceMap": false
+    "noEmit": false,
+    "sourceMap": false,
+    "declaration": false
   },
-  "include": ["src/server/**/*.ts"]
+  "include": ["src/server/**/*.ts"],
+  "exclude": ["node_modules"]
 }
