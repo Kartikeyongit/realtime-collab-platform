@@ -40,9 +40,9 @@ COPY --from=builder /app/dist-server ./dist-server
 COPY --from=builder /app/server/yjs-server.js ./server/yjs-server.js
 COPY --from=builder /app/server/start.js ./server/start.js
 
-# Prisma schema + client (needed at runtime by socket/yjs servers)
+# Prisma schema + generated client (needed at runtime by socket/yjs servers)
 COPY --from=builder /app/prisma ./prisma
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
 
 # Yjs persistence dir
 RUN mkdir -p yjs-data && chmod 777 yjs-data
