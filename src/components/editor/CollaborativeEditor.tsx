@@ -138,11 +138,11 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
 
     // Load initial content from DB into Y.Doc if the Y.Doc is empty
     useEffect(() => {
-      if (!editorRef.current || !synced) return;
+      if (!editorRef.current) return;
       if (initialContent && isEmpty) {
         editorRef.current.commands.setContent(initialContent);
       }
-    }, [synced, isEmpty, initialContent]);
+    }, [initialContent, isEmpty]);
 
     useEffect(() => {
       onConnectionChange?.(connected);
