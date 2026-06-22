@@ -11,14 +11,15 @@ interface TNode {
   attrs?: Record<string, any>;
 }
 
+type ParaChild = TextRun | ImageRun;
+
 export class ExportService {
-  // ── PDF — uses browser native print (handles any HTML, multi-page, tables, images) ──
+  // ── PDF — uses browser native print ──
   static toPDF(element: HTMLElement, _filename: string): Promise<void> {
     return new Promise((resolve) => {
       const iframe = document.createElement('iframe');
       iframe.style.cssText = 'position: fixed; width: 0; height: 0; border: 0; visibility: hidden;';
       document.body.appendChild(iframe);
-
       const w = iframe.contentWindow!;
       const d = w.document;
       d.open();
@@ -43,14 +44,7 @@ export class ExportService {
 </style>
 </head><body>${element.innerHTML}</body></html>`);
       d.close();
-
-      // Wait for images/fonts to settle, then print
-      setTimeout(() => {
-        w.focus();
-        w.print();  // blocks until user closes the print dialog
-        document.body.removeChild(iframe);
-        resolve();
-      }, 600);
+      setTimeout(() => { w.focus(); w.print(); document.body.removeChild(iframe); resolve(); }, 600);
     });
   }
 
@@ -74,21 +68,69 @@ export class ExportService {
       try {
         const t = n.type || '';
         switch (t) {
-          case 'paragraph':          out.push(ExportService.p(n)); break;
-          case 'heading':            out.push(ExportService.h(n)); break;
-          case 'bulletList':         out.push(...ExportService.ul(n)); break;
-          case 'orderedList':        out.push(...ExportService.ol(n)); break;
-          case 'taskList':           out.push(...ExportService.tl(n)); break;
+          case 'paragraph':          out.push(await ExportService.p(n)); break;
+          case 'heading':            out.push(await ExportService.h(n)); break;
+          case 'bulletList':         out.push(...await ExportService.ul(n)); break;
+          case 'orderedList':        out.push(...await ExportService.ol(n)); break;
+          case 'taskList':           out.push(...await ExportService.tl(n)); break;
           case 'table':              out.push(await ExportService.tbl(n)); break;
-          case 'blockquote':         out.push(ExportService.bq(n)); break;
+          case 'blockquote':         out.push(await ExportService.bq(n)); break;
           case 'codeBlock':          out.push(ExportService.cb(n)); break;
           case 'horizontalRule':     out.push(new Paragraph({ thematicBreak: true, spacing: { before: 200, after: 200 } })); break;
-          case 'image':              out.push(await ExportService.img(n)); break;
-          case 'text':               /* handled inline */ break;
+          case 'image':              out.push(await ExportService.imgBlock(n)); break;
+          case 'text':               break;
           default:                   if (n.content) out.push(...await ExportService.convertDoc(n.content)); break;
         }
       } catch (e) {
-        console.warn('Skipping unsupported node type:', n.type, e);
+        console.warn('Skipping node type:', n.type, e);
+      }
+    }
+    return out;
+  }
+
+  // ── Fetch image data — works for data URLs and CORS-enabled remote URLs ──
+  private static async fetchImage(src: string): Promise<{ data: ArrayBuffer; type: 'png' | 'jpg' | 'gif' | 'bmp' | 'svg' } | null> {
+    try {
+      const r = await fetch(src);
+      if (!r.ok) return null;
+      const data = await r.arrayBuffer();
+      const type = ExportService.imageType(src);
+      return { data, type };
+    } catch { return null; }
+  }
+
+  // ── ImageRun builder ──
+  private static async imgRun(n: TNode): Promise<ParaChild | null> {
+    const src = n.attrs?.src || '';
+    if (!src) return null;
+    const w = n.attrs?.width ? Number(n.attrs.width) : 300;
+    const h = n.attrs?.height ? Number(n.attrs.height) : 200;
+    const img = await ExportService.fetchImage(src);
+    if (!img) return null;
+    return new ImageRun({ data: img.data, transformation: { width: w, height: h }, type: img.type } as any);
+  }
+
+  // ── Block-level image (own paragraph) ──
+  private static async imgBlock(n: TNode): Promise<Paragraph> {
+    const alt = n.attrs?.alt || '';
+    const run = await ExportService.imgRun(n);
+    if (run instanceof ImageRun) {
+      return new Paragraph({ spacing: { before: 80, after: 80 }, children: [run] });
+    }
+    return new Paragraph({ children: [new TextRun({ text: `[Image${alt ? ': ' + alt : ''}]`, italics: true, color: '888888' })] });
+  }
+
+  // ── Build paragraph children (TextRun + inline ImageRun) ──
+  private static async inline(nodes: TNode[] | undefined): Promise<ParaChild[]> {
+    if (!nodes) return [];
+    const out: ParaChild[] = [];
+    for (const n of nodes) {
+      if (n.type === 'image') {
+        const run = await ExportService.imgRun(n);
+        if (run) out.push(run);
+        else out.push(new TextRun({ text: '[Image]', italics: true, color: '888888' }));
+      } else {
+        out.push(...ExportService.tr(n));
       }
     }
     return out;
@@ -96,12 +138,11 @@ export class ExportService {
 
   // ── Build text runs from marks ──
   private static tr(n: TNode): TextRun[] {
-    if (!n.text && !n.content) return [];
-    const text = n.text || n.content?.map(c => c.text || '').join('') || '';
+    if (!n.text) return [];
+    const text = n.text;
     if (!text) return [];
     const marks = n.marks || [];
     const opts: Record<string, any> = { text };
-
     for (const m of marks) {
       switch (m.type) {
         case 'bold':           opts.bold = true; break;
@@ -110,43 +151,34 @@ export class ExportService {
         case 'strike':         opts.strike = true; break;
         case 'code':           opts.font = 'Consolas'; opts.size = 20; break;
         case 'link':           opts.color = '0563C1'; opts.underline = { type: 'single' }; break;
-        case 'highlight':      /* skip highlight in docx */ break;
+        case 'highlight':      break;
         case 'textStyle':      if (m.attrs?.color) opts.color = m.attrs.color; break;
       }
     }
     return [new TextRun(opts)];
   }
 
-  // ── Inline content → TextRun[] ──
-  private static inline(nodes: TNode[] | undefined): TextRun[] {
-    if (!nodes) return [];
-    return nodes.flatMap(n => ExportService.tr(n));
-  }
-
   // ── Paragraph ──
-  private static p(n: TNode): Paragraph {
-    return new Paragraph({ spacing: { after: 80 }, children: ExportService.inline(n.content) });
+  private static async p(n: TNode): Promise<Paragraph> {
+    return new Paragraph({ spacing: { after: 80 }, children: await ExportService.inline(n.content) });
   }
 
   // ── Heading ──
-  private static h(n: TNode): Paragraph {
+  private static async h(n: TNode): Promise<Paragraph> {
     const lvl = n.attrs?.level ? Number(n.attrs.level) : 1;
     const hh: any = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3, 4: HeadingLevel.HEADING_4, 5: HeadingLevel.HEADING_5, 6: HeadingLevel.HEADING_6 };
-    return new Paragraph({ heading: hh[lvl] || HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 }, children: ExportService.inline(n.content) });
+    return new Paragraph({ heading: hh[lvl] || HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 }, children: await ExportService.inline(n.content) });
   }
 
   // ── Bullet list ──
-  private static ul(n: TNode): Paragraph[] {
+  private static async ul(n: TNode): Promise<Paragraph[]> {
     const out: Paragraph[] = [];
-    const items = n.content || [];
-    for (const li of items) {
-      const textRuns = ExportService.inline(li.content);
-      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: '\u2022  ' }), ...textRuns] }));
-      // Handle nested lists in list items
+    for (const li of n.content || []) {
+      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: '\u2022  ' }), ...await ExportService.inline(li.content)] }));
       if (li.content) {
         for (const child of li.content) {
-          if (child.type === 'bulletList') out.push(...ExportService.ul(child));
-          if (child.type === 'orderedList') out.push(...ExportService.ol(child));
+          if (child.type === 'bulletList') out.push(...await ExportService.ul(child));
+          if (child.type === 'orderedList') out.push(...await ExportService.ol(child));
         }
       }
     }
@@ -154,18 +186,16 @@ export class ExportService {
   }
 
   // ── Ordered list ──
-  private static ol(n: TNode): Paragraph[] {
+  private static async ol(n: TNode): Promise<Paragraph[]> {
     const out: Paragraph[] = [];
-    const items = n.content || [];
     let idx = 1;
-    for (const li of items) {
-      const textRuns = ExportService.inline(li.content);
-      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: `${idx}.  ` }), ...textRuns] }));
+    for (const li of n.content || []) {
+      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: `${idx}.  ` }), ...await ExportService.inline(li.content)] }));
       idx++;
       if (li.content) {
         for (const child of li.content) {
-          if (child.type === 'bulletList') out.push(...ExportService.ul(child));
-          if (child.type === 'orderedList') out.push(...ExportService.ol(child));
+          if (child.type === 'bulletList') out.push(...await ExportService.ul(child));
+          if (child.type === 'orderedList') out.push(...await ExportService.ol(child));
         }
       }
     }
@@ -173,14 +203,12 @@ export class ExportService {
   }
 
   // ── Task list ──
-  private static tl(n: TNode): Paragraph[] {
+  private static async tl(n: TNode): Promise<Paragraph[]> {
     const out: Paragraph[] = [];
-    const items = n.content || [];
-    for (const li of items) {
+    for (const li of n.content || []) {
       const checked = li.attrs?.checked;
       const prefix = checked ? '\u2611  ' : '\u2610  ';
-      const textRuns = ExportService.inline(li.content);
-      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: prefix }), ...textRuns] }));
+      out.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 720 }, children: [new TextRun({ text: prefix }), ...await ExportService.inline(li.content)] }));
     }
     return out;
   }
@@ -188,19 +216,14 @@ export class ExportService {
   // ── Table ──
   private static async tbl(n: TNode): Promise<Table> {
     const rows: TableRow[] = [];
-    const tbody = n.content || [];
-    for (const trNode of tbody) {
+    for (const trNode of n.content || []) {
       const cells: TableCell[] = [];
-      const tds = trNode.content || [];
-      for (const tdNode of tds) {
+      for (const tdNode of trNode.content || []) {
         const cellItems = await ExportService.convertDoc(tdNode.content || []);
         const pars = cellItems.filter(p => p instanceof Paragraph) as Paragraph[];
         if (!pars.length) pars.push(new Paragraph({ children: [new TextRun({ text: '' })] }));
         const isH = tdNode.type === 'tableHeader' || tdNode.type === 'th';
-        cells.push(new TableCell({
-          children: pars,
-          ...(isH ? { shading: { type: 'clear', fill: 'f2f2f2' } as any } : {}),
-        }));
+        cells.push(new TableCell({ children: pars, ...(isH ? { shading: { type: 'clear', fill: 'f2f2f2' } as any } : {}) }));
       }
       rows.push(new TableRow({ children: cells }));
     }
@@ -208,8 +231,8 @@ export class ExportService {
   }
 
   // ── Blockquote ──
-  private static bq(n: TNode): Paragraph {
-    return new Paragraph({ spacing: { before: 120, after: 120 }, indent: { left: ExportService.twip(0.5) }, children: ExportService.inline(n.content) });
+  private static async bq(n: TNode): Promise<Paragraph> {
+    return new Paragraph({ spacing: { before: 120, after: 120 }, indent: { left: ExportService.twip(0.5) }, children: await ExportService.inline(n.content) });
   }
 
   // ── Code block ──
@@ -218,41 +241,7 @@ export class ExportService {
     return new Paragraph({ spacing: { before: 80, after: 80 }, indent: { left: ExportService.twip(0.3) }, children: [new TextRun({ text, font: 'Consolas', size: 18 })] });
   }
 
-  // ── Image — fetch and embed in docx ──
-  private static async img(n: TNode): Promise<Paragraph> {
-    const src = n.attrs?.src || '';
-    const alt = n.attrs?.alt || '';
-    const w = n.attrs?.width ? Number(n.attrs.width) : 400;
-    const h = n.attrs?.height ? Number(n.attrs.height) : 300;
-
-    if (!src) {
-      return new Paragraph({ children: [new TextRun({ text: alt || '[Image]', italics: true, color: '888888' })] });
-    }
-
-    try {
-      const response = await fetch(src);
-      if (!response.ok) throw new Error('Fetch failed');
-      const data = await response.arrayBuffer();
-
-      const type = ExportService.imageType(src);
-      return new Paragraph({
-        spacing: { before: 80, after: 80 },
-        children: [
-          new ImageRun({
-            data,
-            transformation: { width: w, height: h },
-            type,
-          } as any),
-        ],
-      });
-    } catch {
-      return new Paragraph({
-        spacing: { before: 80, after: 80 },
-        children: [new TextRun({ text: `[Image${alt ? ': ' + alt : ''}]`, italics: true, color: '888888' })],
-      });
-    }
-  }
-
+  // ── Image type detection ──
   private static imageType(src: string): 'png' | 'jpg' | 'gif' | 'bmp' | 'svg' {
     if (src.startsWith('data:image/png')) return 'png';
     if (src.startsWith('data:image/jpeg') || src.startsWith('data:image/jpg')) return 'jpg';
@@ -268,7 +257,6 @@ export class ExportService {
     return 'png';
   }
 
-  // ── Helpers ──
   private static twip(inches: number) { return Math.round(inches * 1440); }
 
   // ── Markdown ──
