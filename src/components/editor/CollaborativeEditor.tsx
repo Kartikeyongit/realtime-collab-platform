@@ -133,15 +133,21 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
       },
       onCreate: ({ editor: ed }) => {
         editorRef.current = ed;
+        if (initialContent && !initialContentLoaded.current) {
+          const fragment = yDoc.getXmlFragment('default');
+          if (fragment.length === 0 || (fragment.length === 1 && fragment.get(0).length === 0)) {
+            initialContentLoaded.current = true;
+            ed.commands.setContent(initialContent);
+          }
+        }
         onEditorReady?.(ed);
       },
     }, [extensions]);
 
-    // Load initial DB content only when Yjs sync completes AND the Y.Doc has no real content
+    // Fallback: load initial DB content once Yjs sync completes and Y.Doc is still empty
     useEffect(() => {
       if (!synced || !initialContent || !editorRef.current || initialContentLoaded.current) return;
       const fragment = yDoc.getXmlFragment('default');
-      // Yjs sync may have populated the fragment; only load from DB if it's still empty
       if (fragment.length === 0 || (fragment.length === 1 && fragment.get(0).length === 0)) {
         initialContentLoaded.current = true;
         editorRef.current.commands.setContent(initialContent);
