@@ -1,9 +1,11 @@
 const { spawn, execSync } = require('child_process');
 const path = require('path');
+const { createProxy } = require('./proxy');
 
 const ROOT = path.join(__dirname, '..');
 
-const PORT = process.env.PORT || '3000';
+const PROXY_PORT = process.env.PORT || '3000';
+const NEXT_PORT = '3000';
 const SOCKET_PORT = process.env.SOCKET_PORT || '3001';
 const YJS_PORT = process.env.YJS_PORT || '1234';
 
@@ -54,22 +56,29 @@ function startProcess(name, command, args, opts = {}) {
     console.error('Seed check failed:', e.message);
   }
 
-  // ── Start all services ────────────────────────────────────────────
-  console.log(`Starting all services...
-  Next.js  → :${PORT}
-  Socket.IO → :${SOCKET_PORT}
-  Yjs       → :${YJS_PORT}
+  // ── Start backend services (internal ports) ────────────────────────
+  console.log(`Starting internal services...
+  Next.js      → :${NEXT_PORT}
+  Socket.IO    → :${SOCKET_PORT}
+  Yjs          → :${YJS_PORT}
+  Proxy (main) → :${PROXY_PORT}
 `);
 
   startProcess('next', 'node', [path.join(ROOT, 'server.js')], {
-    env: { PORT, HOSTNAME: '0.0.0.0' },
+    env: { PORT: NEXT_PORT, HOSTNAME: '127.0.0.1' },
   });
 
   startProcess('socket', 'node', [path.join(ROOT, 'dist-server', 'index.js')], {
-    env: { SOCKET_PORT, CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || `http://localhost:${PORT}` },
+    env: { SOCKET_PORT, CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || `http://localhost:${PROXY_PORT}` },
   });
 
   startProcess('yjs', 'node', [path.join(ROOT, 'server', 'yjs-server.js')], {
     env: { YJS_PORT },
+  });
+
+  // ── Start proxy on the public port ─────────────────────────────────
+  const proxy = createProxy();
+  proxy.listen(PROXY_PORT, () => {
+    console.log(`Proxy listening on port ${PROXY_PORT}`);
   });
 })();

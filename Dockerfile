@@ -36,8 +36,9 @@ COPY --from=builder /app/public ./public
 # Socket server (compiled JS)
 COPY --from=builder /app/dist-server ./dist-server
 
-# Yjs server
+# Yjs server + proxy + start script
 COPY --from=builder /app/server/yjs-server.js ./server/yjs-server.js
+COPY --from=builder /app/server/proxy.js ./server/proxy.js
 COPY --from=builder /app/server/start.js ./server/start.js
 
 # Prisma schema + generated client (needed at runtime by socket/yjs servers)
