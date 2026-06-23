@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link, Mail, Copy, Check, Loader2, Clock, Lock, Globe, Trash2, Plus, UserX } from 'lucide-react';
+import { X, Link, Mail, Copy, Check, Loader2, Clock, Lock, Globe, Trash2, Plus, UserX, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 interface ShareLink {
@@ -29,6 +29,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   const [copied, setCopied] = useState<string | null>(null);
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(false);
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showCreateLink, setShowCreateLink] = useState(false);
   const [linkPassword, setLinkPassword] = useState('');
   const [linkExpiry, setLinkExpiry] = useState('');
@@ -116,10 +117,25 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
                 <Mail size={14} color="#a8a29e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" className="input" style={{ paddingLeft: '36px' }} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
               </div>
-              <select value={role} onChange={(e) => setRole(e.target.value as any)} className="input" style={{ width: '95px' }}>
-                <option value="editor">Editor</option>
-                <option value="viewer">Viewer</option>
-              </select>
+              <div style={{ position: 'relative', width: '95px' }}>
+                <button onClick={() => setShowRoleMenu(!showRoleMenu)} className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'space-between', gap: 4, padding: '8px 10px', fontSize: 13, borderRadius: 10, background: '#fafaf9', border: '1.5px solid #e7e5e4' }}>
+                  {role === 'editor' ? 'Editor' : 'Viewer'}
+                  <ChevronDown size={13} style={{ transition: 'transform 0.2s', transform: showRoleMenu ? 'rotate(180deg)' : 'none' }} />
+                </button>
+                {showRoleMenu && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowRoleMenu(false)} />
+                    <div className="dropdown" style={{ right: 0, left: 0, minWidth: 'unset', padding: 4 }}>
+                      <button onClick={() => { setRole('editor'); setShowRoleMenu(false); }} className="dropdown-item" style={{ fontSize: 13, padding: '7px 10px', ...role === 'editor' ? { background: '#fff7ed', color: '#f97316' } : {} }}>
+                        Editor
+                      </button>
+                      <button onClick={() => { setRole('viewer'); setShowRoleMenu(false); }} className="dropdown-item" style={{ fontSize: 13, padding: '7px 10px', ...role === 'viewer' ? { background: '#fff7ed', color: '#f97316' } : {} }}>
+                        Viewer
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <button onClick={handleAdd} disabled={sharing} className="btn btn-primary btn-sm">
                 {sharing ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
               </button>
