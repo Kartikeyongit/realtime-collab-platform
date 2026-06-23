@@ -12,14 +12,14 @@ interface CustomToastProps {
 }
 
 const config = {
-  success: { icon: CheckCircle2, color: '#059669', bg: '#f0fdf4' },
-  error: { icon: XCircle, color: '#DC2626', bg: '#fef2f2' },
-  warning: { icon: AlertTriangle, color: '#f97316', bg: '#fff7ed' },
-  info: { icon: Info, color: '#3b82f6', bg: '#eff6ff' },
+  success: { icon: CheckCircle2, color: '#059669' },
+  error: { icon: XCircle, color: '#DC2626' },
+  warning: { icon: AlertTriangle, color: '#f97316' },
+  info: { icon: Info, color: '#3b82f6' },
 };
 
 export function CustomToast({ t, type, title, description }: CustomToastProps) {
-  const { icon: Icon, color, bg } = config[type];
+  const { icon: Icon, color } = config[type];
 
   return (
     <div
@@ -43,25 +43,18 @@ export function CustomToast({ t, type, title, description }: CustomToastProps) {
       <div style={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: '10px',
+        gap: '8px',
         padding: '12px 14px',
         flex: 1,
       }}>
-        <div style={{
-          width: '28px', height: '28px', borderRadius: '8px',
-          background: bg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <Icon size={14} color={color} />
-        </div>
+        <Icon size={14} color={color} style={{ flexShrink: 0, marginTop: '2px' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {title && (
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1c1917', marginBottom: '2px', lineHeight: 1.3 }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', marginBottom: '2px', lineHeight: 1.3 }}>
               {title}
             </div>
           )}
-          <div style={{ fontSize: '12px', color: '#78716c', lineHeight: 1.4 }}>
+          <div style={{ fontSize: '13px', color: '#78716c', lineHeight: 1.4 }}>
             {description}
           </div>
         </div>
@@ -69,7 +62,7 @@ export function CustomToast({ t, type, title, description }: CustomToastProps) {
           onClick={() => toast.dismiss(t.id)}
           style={{
             border: 'none', background: 'none', padding: '2px', cursor: 'pointer',
-            color: '#d6d3d1', flexShrink: 0, marginTop: '1px', borderRadius: '4px',
+            color: '#d6d3d1', flexShrink: 0, marginTop: '3px', borderRadius: '4px',
             lineHeight: 0,
           }}
         >
