@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import { Search, Clock, Users, Trash2, FileText, Loader2 } from 'lucide-react';
+import { Search, Clock, Users, Trash2, FileText } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { toast } from 'react-hot-toast';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
@@ -94,9 +94,14 @@ export default function DashboardPage() {
 
       <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '340px' }}>
         <Search size={15} color="#a8a29e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-        <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px', paddingRight: '32px' }} />
-        {refetching && <Loader2 size={13} className="animate-spin" color="#a8a29e" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }} />}
+        <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px', paddingRight: '36px' }} />
+        {refetching && (
+          <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px' }}>
+            <div className="search-spinner" />
+          </div>
+        )}
       </div>
+      <style>{`.search-spinner { width: 14px; height: 14px; border: 2px solid #e7e5e4; border-top-color: #f97316; border-radius: 50%; animation: searchSpin 0.6s linear infinite; } @keyframes searchSpin { to { transform: rotate(360deg); } }`}</style>
 
       {documents.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', marginTop: '20px' }}>
