@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Plus, Users, Search, Sparkles, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
+import { RecentDocuments } from '@/components/documents/RecentDocuments';
 
 export default function HomePage() {
   const { data: session } = useSession();
@@ -81,6 +82,8 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      <RecentDocuments />
 
       {/* Features Grid */}
       <section style={{ padding: '60px 24px', maxWidth: '1000px', margin: '0 auto' }}>

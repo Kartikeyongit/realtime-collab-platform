@@ -547,6 +547,12 @@ body {
   50% { box-shadow: 0 0 40px rgba(249,115,22,0.5); }
 }
 
+/* Pulse animation for skeleton loading */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Force scrollbar to prevent layout shift */
 html {
   overflow-y: scroll;
