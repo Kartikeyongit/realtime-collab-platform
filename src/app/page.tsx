@@ -92,48 +92,44 @@ export default function HomePage() {
 
       <RecentDocuments />
       <StatsBar />
-      {!session && (
-        <>
-          <HowItWorks />
-          <UseCases />
-          <Testimonials />
-          <FAQ />
+      <HowItWorks />
+      <UseCases />
+      <Testimonials />
+      <FAQ />
 
-          {/* Features Grid */}
-          <AnimatedSection>
-            <section style={{ padding: '60px 24px', maxWidth: '1000px', margin: '0 auto' }}>
-              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px' }}>Everything you need</h2>
-                <p style={{ color: '#78716c', fontSize: '15px' }}>Powerful features to help your team work better together</p>
+      {/* Features Grid */}
+      <AnimatedSection>
+        <section style={{ padding: '60px 24px', maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px' }}>Everything you need</h2>
+            <p style={{ color: '#78716c', fontSize: '15px' }}>Powerful features to help your team work better together</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            {features.map((f, i) => (
+              <div key={i} className="card" style={{ padding: '28px 24px', textAlign: 'center', border: '1.5px solid #e7e5e4' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                  <f.icon size={22} color={f.color} />
+                </div>
+                <h3 style={{ fontWeight: 600, marginBottom: '6px', fontSize: '15px' }}>{f.title}</h3>
+                <p style={{ fontSize: '13px', color: '#78716c', lineHeight: 1.5 }}>{f.desc}</p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                {features.map((f, i) => (
-                  <div key={i} className="card" style={{ padding: '28px 24px', textAlign: 'center', border: '1.5px solid #e7e5e4' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                      <f.icon size={22} color={f.color} />
-                    </div>
-                    <h3 style={{ fontWeight: 600, marginBottom: '6px', fontSize: '15px' }}>{f.title}</h3>
-                    <p style={{ fontSize: '13px', color: '#78716c', lineHeight: 1.5 }}>{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </AnimatedSection>
+            ))}
+          </div>
+        </section>
+      </AnimatedSection>
 
-          {/* CTA */}
-          <AnimatedSection>
-            <section style={{ padding: '60px 24px', textAlign: 'center' }}>
-              <div style={{ maxWidth: '550px', margin: '0 auto', background: 'linear-gradient(135deg, #f97316, #ea580c)', borderRadius: '24px', padding: '48px 32px', color: 'white' }}>
-                <h2 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '10px' }}>Ready to collaborate?</h2>
-                <p style={{ fontSize: '15px', opacity: 0.9, marginBottom: '24px' }}>Join teams who already create together on CollabDocs.</p>
-                <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: '#f97316', padding: '14px 28px', borderRadius: '12px', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
-                  Get started free <ArrowRight size={18} />
-                </Link>
-              </div>
-            </section>
-          </AnimatedSection>
-        </>
-      )}
+      {/* CTA */}
+      <AnimatedSection>
+        <section style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <div style={{ maxWidth: '550px', margin: '0 auto', background: 'linear-gradient(135deg, #f97316, #ea580c)', borderRadius: '24px', padding: '48px 32px', color: 'white' }}>
+            <h2 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '10px' }}>Ready to collaborate?</h2>
+            <p style={{ fontSize: '15px', opacity: 0.9, marginBottom: '24px' }}>Join teams who already create together on CollabDocs.</p>
+            <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: '#f97316', padding: '14px 28px', borderRadius: '12px', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+              Get started free <ArrowRight size={18} />
+            </Link>
+          </div>
+        </section>
+      </AnimatedSection>
       <Footer />
 
       <style>{`
