@@ -674,3 +674,26 @@ html {
     font-size: 14px !important;
   }
 }
+
+/* Focus mode */
+body.editor-focus .editor-content-area {
+  position: relative;
+  z-index: 50;
+}
+body.editor-focus .editor-wrapper .toolbar-area,
+body.editor-focus nav,
+body.editor-focus .editor-wrapper ~ *:not(.editor-content-area) {
+  filter: blur(1px);
+  opacity: 0.15;
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+body.editor-focus .editor-content-area {
+  opacity: 1;
+  filter: none;
+}
+body.editor-focus .editor-content-area .ProseMirror {
+  outline: 2px solid #f97316;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
