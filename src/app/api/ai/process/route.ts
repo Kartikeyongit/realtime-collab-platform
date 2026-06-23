@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { rateLimit } from '@/lib/rateLimit';
 import OpenAI from 'openai';
 
 const SYSTEM_PROMPTS: Record<string, string> = {
@@ -17,7 +18,14 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { text, action } = await request.json();
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const rl = rateLimit(`ai:${session.user.email || ip}`, 20, 60000);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: `Rate limited. Try again in ${Math.ceil(rl.resetIn / 1000)}s.` }, { status: 429 });
+    }
+
+    const body = await request.json();
+    const { text, action, prompt: customPrompt } = body;
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
@@ -34,11 +42,15 @@ export async function POST(request: Request) {
     }
 
     const client = new OpenAI({ apiKey, baseURL });
+    let systemPrompt = SYSTEM_PROMPTS[action as string] || SYSTEM_PROMPTS.improve;
 
-    const systemPrompt = SYSTEM_PROMPTS[action as string] || SYSTEM_PROMPTS.improve;
+    if (action === 'custom' && customPrompt) {
+      systemPrompt = `You are a writing assistant. The user gives you this instruction: "${customPrompt}". Apply it to their text below. Return only the modified text.`;
+    }
+
     const model = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
 
-    const completion = await client.chat.completions.create({
+    const stream = await client.chat.completions.create({
       model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -46,16 +58,37 @@ export async function POST(request: Request) {
       ],
       temperature: 0.7,
       max_tokens: 2048,
+      stream: true,
     });
 
-    const result = completion.choices[0]?.message?.content?.trim() || text;
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+            }
+          }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        } catch (err) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-    return NextResponse.json({ result });
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
   } catch (error: any) {
     console.error('AI process error:', error.message);
-    return NextResponse.json({
-      result: '',
-      note: 'AI processing failed. Please check your API key and try again.',
-    });
+    return NextResponse.json({ error: error.message || 'AI processing failed' }, { status: 500 });
   }
 }

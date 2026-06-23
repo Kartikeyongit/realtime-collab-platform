@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Zap, Users, Search, Sparkles, Shield, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Zap, Users, Search, Sparkles, Shield, Globe, Wand2 } from 'lucide-react';
 import { AnimatedSection } from '@/components/landing/AnimatedSection';
 import { Footer } from '@/components/landing/Footer';
 
@@ -35,6 +35,11 @@ const features = [
     icon: Globe, title: 'Export Anywhere', color: '#06b6d4', bg: '#ecfeff',
     description: 'Export your documents in multiple formats while preserving layout, images, and styling.',
     points: ['PDF export with proper page breaks', 'Word (.docx) with full formatting', 'Markdown for developers', 'HTML and plain text exports'],
+  },
+  {
+    icon: Wand2, title: 'AI Assistant', color: '#f97316', bg: '#fff7ed',
+    description: 'Improve, summarize, grammar-check, or expand your writing with AI — including custom instructions.',
+    points: ['Improve writing clarity and tone', 'Fix grammar and spelling instantly', 'Summarize or expand any selection', 'Custom instructions ("make it funnier", "translate to Spanish")'],
   },
 ];
 
