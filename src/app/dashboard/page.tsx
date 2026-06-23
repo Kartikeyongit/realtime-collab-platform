@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import { Search, Clock, Users, Trash2, FileText } from 'lucide-react';
+import { Search, Clock, Users, Trash2, FileText, Loader2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { toast } from 'react-hot-toast';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
@@ -22,7 +22,8 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refetching, setRefetching] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +48,8 @@ export default function DashboardPage() {
 
   const fetchDocuments = useCallback(async (pageNum: number, searchTerm: string) => {
     try {
-      setLoading(true);
+      if (initialLoading) setInitialLoading(true);
+      else setRefetching(true);
       const params = new URLSearchParams({ page: String(pageNum), limit: String(limit) });
       if (searchTerm) params.set('search', searchTerm);
       const { data } = await axios.get(`/api/documents?${params}`);
@@ -55,8 +57,8 @@ export default function DashboardPage() {
       setTotalPages(data.totalPages);
       setTotal(data.total);
     } catch { toast.error('Failed to load documents'); }
-    finally { setLoading(false); }
-  }, []);
+    finally { setInitialLoading(false); setRefetching(false); }
+  }, [initialLoading]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -74,7 +76,7 @@ export default function DashboardPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (loading) return <DashboardSkeleton />;
+  if (initialLoading) return <DashboardSkeleton />;
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '36px 24px' }}>
@@ -92,7 +94,8 @@ export default function DashboardPage() {
 
       <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '340px' }}>
         <Search size={15} color="#a8a29e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-        <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px' }} />
+        <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px', paddingRight: '32px' }} />
+        {refetching && <Loader2 size={13} className="animate-spin" color="#a8a29e" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }} />}
       </div>
 
       {documents.length === 0 ? (
