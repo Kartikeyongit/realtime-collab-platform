@@ -96,10 +96,12 @@ export default function DashboardPage() {
       </div>
 
       {documents.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <FileText size={40} color="#d6d3d1" style={{ marginBottom: '12px' }} />
-          <p style={{ fontSize: '15px', color: '#78716c', marginBottom: '4px' }}>No documents</p>
-          <p style={{ fontSize: '13px', color: '#a8a29e' }}>{search ? 'Try another search' : 'Click + New in the navbar to create one'}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', marginTop: '20px' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: '#fafaf9', border: '1.5px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <FileText size={32} color="#d6d3d1" />
+          </div>
+          <p style={{ fontSize: '16px', fontWeight: 600, color: '#57534e', marginBottom: '6px' }}>No documents yet</p>
+          <p style={{ fontSize: '14px', color: '#a8a29e', margin: 0 }}>{search ? 'Try another search' : 'Click + New in the navbar to create your first document'}</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '8px' }}>
