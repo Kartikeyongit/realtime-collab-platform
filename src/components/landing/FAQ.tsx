@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { AnimatedSection } from './AnimatedSection';
 
 const faqs = [
   { q: 'Is CollabDocs really free?', a: 'Yes! CollabDocs is completely free to use. There are no paid plans or hidden fees. All features including real-time collaboration, templates, and exports are available at no cost.' },
@@ -17,26 +18,28 @@ export function FAQ() {
 
   return (
     <section style={{ padding: '70px 24px', maxWidth: 700, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8, color: '#1c1917' }}>Frequently asked questions</h2>
-        <p style={{ color: '#78716c', fontSize: 15 }}>Everything you need to know about CollabDocs.</p>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {faqs.map((faq, i) => (
-          <div key={i} style={{ border: '1.5px solid #e7e5e4', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
-            <button
-              onClick={() => setOpen(open === i ? null : i)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#1c1917', lineHeight: 1.4 }}
-            >
-              {faq.q}
-              <ChevronDown size={16} style={{ flexShrink: 0, color: '#a8a29e', transition: 'transform 0.2s', transform: open === i ? 'rotate(180deg)' : 'none' }} />
-            </button>
-            <div style={{ overflow: 'hidden', transition: 'max-height 0.25s ease', maxHeight: open === i ? 200 : 0 }}>
-              <div style={{ padding: '0 20px 16px', fontSize: 13, color: '#57534e', lineHeight: 1.6 }}>{faq.a}</div>
+      <AnimatedSection>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8, color: '#1c1917' }}>Frequently asked questions</h2>
+          <p style={{ color: '#78716c', fontSize: 15 }}>Everything you need to know about CollabDocs.</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {faqs.map((faq, i) => (
+            <div key={i} style={{ border: '1.5px solid #e7e5e4', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+              <button
+                onClick={() => setOpen(open === i ? null : i)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#1c1917', lineHeight: 1.4 }}
+              >
+                {faq.q}
+                <ChevronDown size={16} style={{ flexShrink: 0, color: '#a8a29e', transition: 'transform 0.2s ease', transform: open === i ? 'rotate(180deg)' : 'none' }} />
+              </button>
+              <div style={{ overflow: 'hidden', transition: 'max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1)', maxHeight: open === i ? 400 : 0 }}>
+                <div style={{ padding: '0 20px 16px', fontSize: 13, color: '#57534e', lineHeight: 1.6 }}>{faq.a}</div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </AnimatedSection>
     </section>
   );
 }
