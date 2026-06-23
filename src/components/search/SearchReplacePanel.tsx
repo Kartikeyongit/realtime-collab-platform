@@ -42,17 +42,6 @@ export function SearchReplacePanel({ editor, isOpen, onClose, addToast }: Search
     } catch {}
   }, [editor]);
 
-  const updateDecorations = useCallback((positions: Array<{ from: number; to: number }>, activeIdx: number) => {
-    if (!editor) return;
-    const decorations = positions.map((p, i) =>
-      Decoration.inline(p.from, p.to, {
-        class: i === activeIdx ? 'search-match search-match-active' : 'search-match',
-      })
-    );
-    const set = DecorationSet.create(editor.state.doc, decorations);
-    editor.view.dispatch(editor.state.tr.setMeta(searchKey, set));
-  }, [editor]);
-
   const performSearch = useCallback(() => {
     if (!searchTerm || !editor) {
       setResults([]);
@@ -76,13 +65,25 @@ export function SearchReplacePanel({ editor, isOpen, onClose, addToast }: Search
     setResults(positions);
     if (positions.length > 0) {
       setCurrentIndex(0);
-      editor.commands.setTextSelection({ from: positions[0].from, to: positions[0].to });
-      editor.commands.scrollIntoView();
-      updateDecorations(positions, 0);
+      editor
+        .chain()
+        .focus()
+        .setTextSelection({ from: positions[0].from, to: positions[0].to })
+        .scrollIntoView()
+        .command(({ tr }) => {
+          const decorations = positions.map((p, i) =>
+            Decoration.inline(p.from, p.to, {
+              class: i === 0 ? 'search-match search-match-active' : 'search-match',
+            })
+          );
+          tr.setMeta(searchKey, DecorationSet.create(tr.doc, decorations));
+          return true;
+        })
+        .run();
     } else {
       clearDecorations();
     }
-  }, [searchTerm, caseSensitive, wholeWord, useRegex, editor, updateDecorations, clearDecorations]);
+  }, [searchTerm, caseSensitive, wholeWord, useRegex, editor, clearDecorations]);
 
   useEffect(() => { const t = setTimeout(performSearch, 200); return () => clearTimeout(t); }, [performSearch]);
 
@@ -138,9 +139,21 @@ export function SearchReplacePanel({ editor, isOpen, onClose, addToast }: Search
       : (currentIndex - 1 + results.length) % results.length;
     setCurrentIndex(idx);
     const r = results[idx];
-    editor.commands.setTextSelection({ from: r.from, to: r.to });
-    editor.commands.scrollIntoView();
-    updateDecorations(results, idx);
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: r.from, to: r.to })
+      .scrollIntoView()
+      .command(({ tr }) => {
+        const decorations = results.map((p, i) =>
+          Decoration.inline(p.from, p.to, {
+            class: i === idx ? 'search-match search-match-active' : 'search-match',
+          })
+        );
+        tr.setMeta(searchKey, DecorationSet.create(tr.doc, decorations));
+        return true;
+      })
+      .run();
   };
 
   const replaceOne = () => {
