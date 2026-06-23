@@ -279,7 +279,7 @@ body {
 .dropdown-divider {
   height: 1px;
   background: var(--border);
-  margin: 4px -6px;
+  margin: 4px 0;
 }
 
 @keyframes dropdownIn {
