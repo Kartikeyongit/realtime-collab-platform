@@ -118,9 +118,9 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
                 <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" className="input" style={{ paddingLeft: '36px' }} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
               </div>
               <div style={{ position: 'relative', width: '95px' }}>
-                <button onClick={() => setShowRoleMenu(!showRoleMenu)} className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'space-between', gap: 4, padding: '10px 12px', fontSize: 13, borderRadius: 8, background: '#fafaf9', border: '1.5px solid #e7e5e4' }}>
+                <button onClick={() => setShowRoleMenu(!showRoleMenu)} className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'space-between', gap: 4, padding: '10px 12px', fontSize: 14, borderRadius: 8, background: '#fafaf9', border: '1.5px solid #e7e5e4' }}>
                   {role === 'editor' ? 'Editor' : 'Viewer'}
-                  <ChevronDown size={13} style={{ transition: 'transform 0.2s', transform: showRoleMenu ? 'rotate(180deg)' : 'none' }} />
+                  <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showRoleMenu ? 'rotate(180deg)' : 'none' }} />
                 </button>
                 {showRoleMenu && (
                   <>
