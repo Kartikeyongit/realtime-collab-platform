@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import axios from 'axios';
 import { Eye, EyeOff, Check, X, ArrowLeft } from 'lucide-react';
 
@@ -32,8 +33,14 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await axios.post('/api/auth/register', { name: form.name, email: form.email, password: form.password });
-      setSuccess(true);
-      setTimeout(() => router.push('/auth/signin?registered=true'), 1500);
+      const result = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
+      if (result?.error) {
+        setError('Account created but sign in failed. Please sign in manually.');
+        setSuccess(true);
+        setTimeout(() => router.push('/auth/signin'), 2000);
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed');
     } finally {
@@ -54,7 +61,7 @@ export default function RegisterPage() {
             <Check size={28} color="#22c55e" />
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Account created!</h2>
-          <p style={{ color: '#78716c', fontSize: '14px' }}>Redirecting to sign in...</p>
+          <p style={{ color: '#78716c', fontSize: '14px' }}>Could not sign in automatically. Redirecting to sign in...</p>
         </div>
       </div>
     );
