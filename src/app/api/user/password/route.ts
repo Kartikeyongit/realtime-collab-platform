@@ -4,6 +4,23 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { prisma } = await import('@/lib/prisma');
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { password: true },
+    });
+
+    return NextResponse.json({ hasPassword: !!user?.password });
+  } catch {
+    return NextResponse.json({ hasPassword: false });
+  }
+}
+
 export async function PATCH(request: Request) {
   try {
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -21,12 +38,8 @@ export async function PATCH(request: Request) {
 
     const { currentPassword, newPassword } = await request.json();
 
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: 'Both passwords are required' }, { status: 400 });
-    }
-
-    if (newPassword.length < 6) {
-      return NextResponse.json({ error: 'New password must be at least 6 characters' }, { status: 400 });
+    if (!newPassword || newPassword.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
     const { prisma } = await import('@/lib/prisma');
@@ -37,10 +50,13 @@ export async function PATCH(request: Request) {
       select: { password: true },
     });
 
-    if (!user?.password) return NextResponse.json({ error: 'No password set' }, { status: 400 });
-
-    const valid = verifyPassword(currentPassword, user.password);
-    if (!valid) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 403 });
+    if (user?.password) {
+      if (!currentPassword) {
+        return NextResponse.json({ error: 'Current password is required' }, { status: 400 });
+      }
+      const valid = verifyPassword(currentPassword, user.password);
+      if (!valid) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 403 });
+    }
 
     const hashedPassword = hashPassword(newPassword);
 
@@ -49,7 +65,7 @@ export async function PATCH(request: Request) {
       data: { password: hashedPassword },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, isNew: !user?.password });
   } catch (error) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
