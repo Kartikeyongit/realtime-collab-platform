@@ -1,9 +1,20 @@
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { FileText } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 
 export function Footer() {
+  const { data: session } = useSession();
+  const router = useRouter();
   const linkStyle: React.CSSProperties = { display: 'block', fontSize: 13, color: '#78716c', textDecoration: 'none', lineHeight: '2.2' };
+
+  const handleDashboard = (e: React.MouseEvent) => {
+    if (!session) {
+      e.preventDefault();
+      router.push('/auth/signin');
+    }
+  };
 
   return (
     <footer style={{ background: '#fdfbf7', color: '#1c1917', padding: '48px 24px 32px', borderTop: '1.5px solid #e7e5e4' }}>
@@ -22,7 +33,7 @@ export function Footer() {
             <div>
               <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#1c1917' }}>Product</div>
               <Link href="/templates" className="footer-link" style={linkStyle}>Templates</Link>
-              <Link href="/dashboard" className="footer-link" style={linkStyle}>Dashboard</Link>
+              <Link href="/dashboard" onClick={handleDashboard} className="footer-link" style={linkStyle}>Dashboard</Link>
               <Link href="/features" className="footer-link" style={linkStyle}>Features</Link>
             </div>
             <div>
