@@ -194,24 +194,28 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
           ))}
         </div>
         {mode === 'custom' && (
-          <>
-            <div style={{ fontSize: '11px', color: '#78716c', marginBottom: '8px', padding: '8px 10px', background: '#fafaf9', borderRadius: '8px', border: '1px solid #e7e5e4' }}>
-              Examples: &quot;make this funnier&quot; · &quot;translate to Spanish&quot; · &quot;rewrite for beginners&quot; · &quot;make it more formal&quot;
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe what you want..."
-                className="input"
-                style={{ flex: 1 }}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAction(); }}
-              />
-              <button onClick={handleAction} disabled={processing} className="btn btn-primary btn-sm" title={processing ? 'Stop' : 'Send'}>
-                {processing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              </button>
-            </div>
-          </>
+          <div style={{ fontSize: '11px', color: '#78716c', marginBottom: '8px', padding: '8px 10px', background: '#fafaf9', borderRadius: '8px', border: '1px solid #e7e5e4' }}>
+            Examples: &quot;make this funnier&quot; · &quot;translate to Spanish&quot; · &quot;rewrite for beginners&quot; · &quot;make it more formal&quot;
+          </div>
+        )}
+        {mode === 'custom' ? (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe what you want..."
+              className="input"
+              style={{ flex: 1 }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAction(); }}
+            />
+            <button onClick={handleAction} disabled={processing} className="btn btn-primary btn-sm" style={{ padding: '6px 14px' }} title="Send">
+              {processing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            </button>
+          </div>
+        ) : (
+          <button onClick={handleAction} disabled={processing} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center', gap: 8, padding: '10px 14px', fontSize: 14, fontWeight: 600 }} title={processing ? 'Stop' : 'Apply'}>
+            {processing ? <Loader2 size={15} className="animate-spin" /> : <>{mode.charAt(0).toUpperCase() + mode.slice(1)} <Send size={15} /></>}
+          </button>
         )}
       </div>
     </div>
