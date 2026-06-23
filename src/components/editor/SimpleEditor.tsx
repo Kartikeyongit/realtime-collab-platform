@@ -7,7 +7,7 @@ import Underline from '@tiptap/extension-underline';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Toolbar } from './Toolbar';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { Save, Loader2 } from 'lucide-react';
 
 interface SimpleEditorProps {
@@ -33,7 +33,7 @@ export function SimpleEditor({ documentId, initialContent, onSave }: SimpleEdito
       onSave?.();
     } catch (error) {
       console.error('Failed to save document:', error);
-      toast.error('Failed to save document');
+      showError('Failed to save document');
     } finally {
       setIsSaving(false);
     }
@@ -89,7 +89,7 @@ export function SimpleEditor({ documentId, initialContent, onSave }: SimpleEdito
     if (editor) {
       const content = editor.getJSON();
       saveDocument(content, true);
-      toast.success('Document saved!');
+      showSuccess('Document saved!');
     }
   };
 

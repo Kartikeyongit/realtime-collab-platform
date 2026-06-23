@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { Loader2 } from 'lucide-react';
 import { templates, Template } from '@/components/templates/templateData';
 
@@ -25,10 +25,10 @@ export default function TemplatesPage() {
     setCreating(template.id);
     try {
       const { data } = await axios.post('/api/documents', { title: template.name, content: template.content });
-      toast.success(`Created "${template.name}"!`);
+      showSuccess(`Created "${template.name}"!`);
       router.push(`/documents/${data.id}`);
     } catch {
-      toast.error('Failed to create document from template');
+      showError('Failed to create document from template');
     } finally {
       setCreating(null);
     }

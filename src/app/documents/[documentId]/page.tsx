@@ -18,7 +18,7 @@ import { NotificationCenter } from '@/components/notifications/NotificationCente
 import { useDocumentStore } from '@/store/documentStore';
 import { InlineRename } from '@/components/ui/InlineRename';
 import { ConfirmDialog } from '@/components/ui/Dialog';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError, showWarning, showInfo } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { WordCount } from '@/components/editor/WordCount';
 import { 
@@ -98,29 +98,29 @@ export default function DocumentPage() {
   const handleRename = (newTitle: string) => { setTitle(newTitle); if (document) setDocument({ ...document, title: newTitle }); };
 
   const addToast = (msg: string, type: 'success' | 'error' | 'warning' | 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else if (type === 'warning') toast(msg, { icon: '⚠️' });
-    else toast(msg);
+    if (type === 'success') showSuccess(msg);
+    else if (type === 'error') showError(msg);
+    else if (type === 'warning') showWarning(msg);
+    else showInfo(msg);
   };
 
   const handleDelete = async () => {
     try {
       await axios.delete(`/api/documents/${documentId}`);
-      toast.success('Document deleted');
+      showSuccess('Document deleted');
       setTimeout(() => router.push('/dashboard'), 500);
     } catch {
-      toast.error('Failed to delete');
+      showError('Failed to delete');
     }
   };
 
   const handleDuplicate = async () => {
     try {
       const { data } = await axios.post('/api/documents', { title: `${title} (Copy)`, content: document?.content });
-      toast.success('Duplicated');
+      showSuccess('Duplicated');
       router.push(`/documents/${data.id}`);
     } catch {
-      toast.error('Failed to duplicate');
+      showError('Failed to duplicate');
     }
   };
 

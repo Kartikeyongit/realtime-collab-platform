@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { ArrowLeft, Save, Lock, User, Trash2, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ConfirmDialog } from '@/components/ui/Dialog';
@@ -30,34 +30,34 @@ export default function SettingsPage() {
   }, []);
 
   const handleProfileSave = async () => {
-    if (!name.trim()) { toast.error('Name is required'); return; }
+    if (!name.trim()) { showError('Name is required'); return; }
     setSavingProfile(true);
     try {
       await axios.patch('/api/user/profile', { name });
       await update();
-      toast.success('Profile updated');
+      showSuccess('Profile updated');
     } catch {
-      toast.error('Failed to update profile');
+      showError('Failed to update profile');
     } finally {
       setSavingProfile(false);
     }
   };
 
   const handlePasswordSave = async () => {
-    if (!newPassword) { toast.error('Enter a new password'); return; }
-    if (newPassword.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-    if (newPassword !== confirmPassword) { toast.error('Passwords do not match'); return; }
-    if (hasPassword && !currentPassword) { toast.error('Enter your current password'); return; }
+    if (!newPassword) { showError('Enter a new password'); return; }
+    if (newPassword.length < 6) { showError('Password must be at least 6 characters'); return; }
+    if (newPassword !== confirmPassword) { showError('Passwords do not match'); return; }
+    if (hasPassword && !currentPassword) { showError('Enter your current password'); return; }
     setSavingPassword(true);
     try {
       const { data } = await axios.patch('/api/user/password', { currentPassword, newPassword });
-      toast.success(data.isNew ? 'Password set' : 'Password updated');
+      showSuccess(data.isNew ? 'Password set' : 'Password updated');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setHasPassword(true);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed');
+      showError(err.response?.data?.error || 'Failed');
     } finally {
       setSavingPassword(false);
     }
@@ -67,10 +67,10 @@ export default function SettingsPage() {
     setDeleting(true);
     try {
       await axios.delete('/api/user/account');
-      toast.success('Account deleted');
+      showSuccess('Account deleted');
       await signOut({ callbackUrl: '/auth/signin' });
     } catch {
-      toast.error('Failed to delete account');
+      showError('Failed to delete account');
       setDeleting(false);
     }
     setShowDeleteConfirm(false);

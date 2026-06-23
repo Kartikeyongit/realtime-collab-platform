@@ -7,7 +7,7 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { Search, Clock, Users, Trash2, FileText } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface Document {
@@ -56,7 +56,7 @@ export default function DashboardPage() {
       setDocuments(data.documents);
       setTotalPages(data.totalPages);
       setTotal(data.total);
-    } catch { toast.error('Failed to load documents'); }
+    } catch { showError('Failed to load documents'); }
     finally { setInitialLoading(false); setRefetching(false); }
   }, [initialLoading]);
 
@@ -66,8 +66,8 @@ export default function DashboardPage() {
       await axios.delete(`/api/documents/${deleteTarget.id}`);
       setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
       setTotal(prev => prev - 1);
-      toast.success('Deleted');
-    } catch { toast.error('Failed to delete'); }
+      showSuccess('Deleted');
+    } catch { showError('Failed to delete'); }
     setDeleteTarget(null);
   };
 

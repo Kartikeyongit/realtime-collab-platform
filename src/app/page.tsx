@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { showError } from '@/lib/toast';
 import { Plus, Users, Search, Sparkles, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
 import { RecentDocuments } from '@/components/documents/RecentDocuments';
 import { StatsBar } from '@/components/landing/StatsBar';
@@ -42,7 +42,7 @@ export default function HomePage() {
       const { data } = await axios.post('/api/documents', { title: 'Untitled' });
       router.push(`/documents/${data.id}`);
     } catch {
-      toast.error('Failed');
+      showError('Failed to create document');
     } finally {
       setCreating(false);
     }

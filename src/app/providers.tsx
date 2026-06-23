@@ -22,27 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
       <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster 
-          position="bottom-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-              borderRadius: '8px',
-            },
-            success: {
-              style: {
-                background: '#059669',
-              },
-            },
-            error: {
-              style: {
-                background: '#DC2626',
-              },
-            },
-          }}
-        />
+        <Toaster position="bottom-right" />
       </QueryClientProvider>
     </SessionProvider>
   );

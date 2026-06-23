@@ -9,7 +9,7 @@ import {
   Trash2, Copy, ExternalLink 
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from '@/lib/toast';
 
 interface DocumentCardProps {
   document: {
@@ -34,10 +34,10 @@ export function DocumentCard({ document, viewMode, onDelete, onRename }: Documen
     
     try {
       await axios.delete(`/api/documents/${document.id}`);
-      toast.success('Document deleted');
+      showSuccess('Document deleted');
       onDelete?.();
     } catch (error) {
-      toast.error('Failed to delete document');
+      showError('Failed to delete document');
     }
     setShowMenu(false);
   };
@@ -50,10 +50,10 @@ export function DocumentCard({ document, viewMode, onDelete, onRename }: Documen
         title: `${document.title} (Copy)`,
         content: doc.content,
       });
-      toast.success('Document duplicated');
+      showSuccess('Document duplicated');
       router.push(`/documents/${response.data.id}`);
     } catch (error) {
-      toast.error('Failed to duplicate document');
+      showError('Failed to duplicate document');
     }
     setShowMenu(false);
   };

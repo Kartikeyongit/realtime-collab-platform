@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { showError } from '@/lib/toast';
 
 interface InlineRenameProps {
   documentId: string;
@@ -41,7 +41,7 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
       await axios.patch(`/api/documents/${documentId}/rename`, { title: trimmed });
       onRename?.(trimmed);
     } catch {
-      toast.error('Failed to rename');
+      showError('Failed to rename');
       setTitle(initialTitle);
     }
   };

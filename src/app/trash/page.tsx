@@ -7,7 +7,7 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2, RotateCcw, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
-import { toast } from 'react-hot-toast';
+import { showSuccess, showError } from '@/lib/toast';
 import Link from 'next/link';
 
 interface TrashedDoc {
@@ -31,7 +31,7 @@ export default function TrashPage() {
     try {
       const { data } = await axios.get('/api/documents/trash');
       setDocuments(data);
-    } catch { toast.error('Failed to load trash'); }
+    } catch { showError('Failed to load trash'); }
     finally { setLoading(false); }
   };
 
@@ -39,8 +39,8 @@ export default function TrashPage() {
     try {
       await axios.patch(`/api/documents/${id}/restore`);
       setDocuments(prev => prev.filter(d => d.id !== id));
-      toast.success('Document restored');
-    } catch { toast.error('Failed to restore'); }
+      showSuccess('Document restored');
+    } catch { showError('Failed to restore'); }
   };
 
   const handlePermanentDelete = async () => {
@@ -48,8 +48,8 @@ export default function TrashPage() {
     try {
       await axios.delete(`/api/documents/${deleteTarget.id}/permanent`);
       setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
-      toast.success('Permanently deleted');
-    } catch { toast.error('Failed to delete'); }
+      showSuccess('Permanently deleted');
+    } catch { showError('Failed to delete'); }
     setDeleteTarget(null);
   };
 
@@ -57,8 +57,8 @@ export default function TrashPage() {
     try {
       await axios.delete('/api/documents/trash');
       setDocuments([]);
-      toast.success('Trash emptied');
-    } catch { toast.error('Failed to empty trash'); }
+      showSuccess('Trash emptied');
+    } catch { showError('Failed to empty trash'); }
     setEmptyTarget(false);
   };
 

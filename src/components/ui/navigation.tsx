@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { showError } from '@/lib/toast';
 import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate } from 'lucide-react';
 
 export function Navigation() {
@@ -20,7 +20,7 @@ export function Navigation() {
       const { data } = await axios.post('/api/documents', { title: 'Untitled' });
       router.push(`/documents/${data.id}`);
     } catch {
-      toast.error('Failed to create document');
+      showError('Failed to create document');
     } finally {
       setCreating(false);
     }
