@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Editor } from '@tiptap/react';
-import { Sparkles, X, Wand2, FileSearch, Loader2, Send, Pencil } from 'lucide-react';
+import { Sparkles, X, Wand2, FileSearch, Loader2, Send, Pencil, MessageSquarePlus } from 'lucide-react';
 
 interface AIAssistantProps {
   editor: Editor;
@@ -18,6 +18,7 @@ const modes: { id: AIMode; label: string; icon: any }[] = [
   { id: 'grammar', label: 'Grammar', icon: FileSearch },
   { id: 'summarize', label: 'Summarize', icon: Sparkles },
   { id: 'expand', label: 'Expand', icon: Pencil },
+  { id: 'custom', label: 'Custom', icon: MessageSquarePlus },
 ];
 
 export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantProps) {
