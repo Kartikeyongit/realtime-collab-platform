@@ -199,7 +199,7 @@ export default function DocumentPage() {
                   <button onClick={() => { setShowSearch(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Search size={15} /> Find & Replace</button>
                   <button onClick={() => { setShowAI(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Sparkles size={15} /> AI Assistant</button>
                   <button onClick={() => { setShowComments(true); setShowMenu(false); }} className="dropdown-item show-mobile"><MessageSquare size={15} /> Comments</button>
-                  <div className="dropdown-divider" />
+                  <div className="dropdown-divider show-mobile" />
                   <button onClick={() => { handleDuplicate(); setShowMenu(false); }} className="dropdown-item"><Copy size={15} /> Duplicate</button>
                   <div className="dropdown-divider" />
                   <button onClick={() => { setShowDeleteDialog(true); setShowMenu(false); }} className="dropdown-item danger"><Trash2 size={15} /> Delete</button>
