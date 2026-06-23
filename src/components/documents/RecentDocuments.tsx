@@ -36,12 +36,14 @@ export function RecentDocuments() {
     retry: false,
   });
 
-  if (!session || isLoading) {
+  if (!session) return null;
+
+  if (isLoading) {
     return (
       <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px 40px' }}>
         <div style={{ height: 24, width: 180, background: '#f0f0f0', borderRadius: 6, marginBottom: 20, animation: 'pulse 1.5s ease-in-out infinite' }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-          {Array.from({ length: isLoading ? 6 : 3 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       </section>
     );
