@@ -67,7 +67,6 @@ export function SearchReplacePanel({ editor, isOpen, onClose, addToast }: Search
       setCurrentIndex(0);
       editor
         .chain()
-        .focus()
         .setTextSelection({ from: positions[0].from, to: positions[0].to })
         .scrollIntoView()
         .command(({ tr }) => {
