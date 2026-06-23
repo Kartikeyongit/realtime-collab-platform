@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
 import { Sparkles, X, Wand2, FileSearch, Loader2, Send, Pencil, MessageSquarePlus } from 'lucide-react';
+import { Plugin, PluginKey } from 'prosemirror-state';
+import { Decoration, DecorationSet } from 'prosemirror-view';
 
 interface AIAssistantProps {
   editor: Editor;
@@ -21,11 +23,74 @@ const modes: { id: AIMode; label: string; icon: any }[] = [
   { id: 'custom', label: 'Custom', icon: MessageSquarePlus },
 ];
 
+const selKey = new PluginKey('ai-selection');
+
 export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantProps) {
   const [prompt, setPrompt] = useState('');
   const [processing, setProcessing] = useState(false);
   const [mode, setMode] = useState<AIMode>('improve');
   const abortRef = useRef<AbortController | null>(null);
+  const pluginRef = useRef<Plugin | null>(null);
+
+  const clearSelectionDecor = useCallback(() => {
+    if (!editor) return;
+    try {
+      editor.view.dispatch(editor.state.tr.setMeta(selKey, DecorationSet.empty));
+    } catch {}
+  }, [editor]);
+
+  const applySelectionDecor = useCallback((from: number, to: number) => {
+    if (!editor) return;
+    const deco = Decoration.inline(from, to, { class: 'ai-selection' });
+    const set = DecorationSet.create(editor.state.doc, [deco]);
+    editor.view.dispatch(editor.state.tr.setMeta(selKey, set));
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor || !isOpen) return;
+    if (!pluginRef.current) {
+      const plugin = new Plugin({
+        key: selKey,
+        state: {
+          init() { return DecorationSet.empty; },
+          apply(tr, set) {
+            const meta = tr.getMeta(selKey);
+            return meta !== undefined ? meta : set.map(tr.mapping, tr.doc);
+          },
+        },
+        props: {
+          decorations(state) { return selKey.getState(state); },
+        },
+      });
+      pluginRef.current = plugin;
+      editor.registerPlugin(plugin);
+
+      const onBlur = () => {
+        const { from, to } = editor.state.selection;
+        if (from !== to) applySelectionDecor(from, to);
+      };
+      const onFocus = () => clearSelectionDecor();
+      editor.on('blur', onBlur);
+      editor.on('focus', onFocus);
+      return () => {
+        clearSelectionDecor();
+        editor.off('blur', onBlur);
+        editor.off('focus', onFocus);
+        if (pluginRef.current) {
+          try { editor.unregisterPlugin(selKey); } catch {}
+          pluginRef.current = null;
+        }
+      };
+    }
+  }, [editor, isOpen, applySelectionDecor, clearSelectionDecor]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPrompt('');
+      setMode('improve');
+      clearSelectionDecor();
+    }
+  }, [isOpen, clearSelectionDecor]);
 
   const handleAction = async () => {
     const { from, to } = editor.state.selection;
@@ -39,6 +104,7 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
 
     setProcessing(true);
     abortRef.current = new AbortController();
+    clearSelectionDecor();
 
     try {
       editor.chain().focus().deleteSelection().run();
@@ -110,6 +176,7 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
 
   return (
     <div style={{ position: 'fixed', bottom: '20px', right: '20px', width: '360px', background: 'white', border: '1.5px solid #e7e5e4', borderRadius: '16px', boxShadow: '0 12px 32px rgba(0,0,0,0.08)', zIndex: 40, overflow: 'hidden' }}>
+      <style>{`.ai-selection { background: #c7d2fe; border-radius: 2px; }`}</style>
       <div style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', padding: '16px 18px', color: 'white' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles size={18} /><span style={{ fontWeight: 600 }}>AI Assistant</span></div>
@@ -127,23 +194,25 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
           ))}
         </div>
         {mode === 'custom' && (
-          <div style={{ fontSize: '11px', color: '#78716c', marginBottom: '8px', padding: '8px 10px', background: '#fafaf9', borderRadius: '8px', border: '1px solid #e7e5e4' }}>
-            Examples: &quot;make this funnier&quot; · &quot;translate to Spanish&quot; · &quot;rewrite for beginners&quot; · &quot;make it more formal&quot;
-          </div>
+          <>
+            <div style={{ fontSize: '11px', color: '#78716c', marginBottom: '8px', padding: '8px 10px', background: '#fafaf9', borderRadius: '8px', border: '1px solid #e7e5e4' }}>
+              Examples: &quot;make this funnier&quot; · &quot;translate to Spanish&quot; · &quot;rewrite for beginners&quot; · &quot;make it more formal&quot;
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe what you want..."
+                className="input"
+                style={{ flex: 1 }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAction(); }}
+              />
+              <button onClick={handleAction} disabled={processing} className="btn btn-primary btn-sm" title={processing ? 'Stop' : 'Send'}>
+                {processing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              </button>
+            </div>
+          </>
         )}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={mode === 'custom' ? 'Describe what you want...' : 'Or describe what you want...'}
-            className="input"
-            style={{ flex: 1 }}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAction(); }}
-          />
-          <button onClick={handleAction} disabled={processing} className="btn btn-primary btn-sm" title={processing ? 'Stop' : 'Send'}>
-            {processing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-          </button>
-        </div>
       </div>
     </div>
   );
