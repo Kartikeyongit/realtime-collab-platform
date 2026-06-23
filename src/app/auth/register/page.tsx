@@ -15,15 +15,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const validate = (pw: string) => ({
-    length: pw.length >= 6,
-    upper: /[A-Z]/.test(pw),
-    lower: /[a-z]/.test(pw),
-    number: /\d/.test(pw),
-  });
-
-  const reqs = validate(form.password);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -105,23 +96,6 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {form.password && (
-                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {[
-                    { key: 'length', label: 'At least 6 characters' },
-                    { key: 'upper', label: 'One uppercase letter' },
-                    { key: 'lower', label: 'One lowercase letter' },
-                    { key: 'number', label: 'One number' },
-                  ].map(({ key, label }) => {
-                    const valid = reqs[key as keyof typeof reqs];
-                    return (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: valid ? '#16a34a' : '#a8a29e' }}>
-                        {valid ? <Check size={12} /> : <X size={12} />} {label}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
             
             <div>

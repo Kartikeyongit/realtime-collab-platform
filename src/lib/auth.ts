@@ -1,13 +1,18 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-
-const getPrisma = async () => {
-  const { prisma } = await import('@/lib/prisma');
-  return prisma;
-};
+import GoogleProvider from 'next-auth/providers/google';
+import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      }),
+    ] : []),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -19,7 +24,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials');
         }
 
-        const prisma = await getPrisma();
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
@@ -53,8 +57,9 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) token.id = user.id;
+      if (account) token.provider = account.provider;
       return token;
     },
     async session({ session, token }) {
