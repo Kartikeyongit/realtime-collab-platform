@@ -530,21 +530,18 @@ body {
 }
 
 /* Custom toast animations */
-.rt-custom-toast {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
 .rt-custom-toast.enter {
-  animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: toastIn 0.2s ease;
 }
 .rt-custom-toast.exit {
-  animation: toastFadeOut 0.2s ease forwards;
+  animation: toastOut 0.15s ease forwards;
 }
-@keyframes toastSlideUp {
-  from { opacity: 0; transform: translateY(12px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-@keyframes toastFadeOut {
-  to { opacity: 0; transform: translateY(-6px) scale(0.96); }
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(-4px); }
 }
 
 /* Blink cursor animation */
