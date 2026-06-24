@@ -12,6 +12,7 @@ import {
   Highlighter, Minus, Table, CheckSquare,
   Subscript, Superscript, RemoveFormatting,
   Indent, Outdent, Focus, Columns, Rows, Trash2,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
@@ -144,34 +145,116 @@ export function Toolbar({ editor }: ToolbarProps) {
     </button>
   );
 
-  interface SelectProps {
+  interface DropdownProps {
     value: string;
     onChange: (value: string) => void;
     options: string[];
     title: string;
   }
 
-  const Select = ({ value, onChange, options, title }: SelectProps) => (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
-      title={title}
-      style={{
-        padding: '6px 7px', border: 'none', borderRadius: '8px',
-        background: 'transparent', fontSize: '13px', color: '#78716c',
-        cursor: 'pointer', maxWidth: '100px', flexShrink: 0,
-        outline: 'none',
-      }}
-      onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
-      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-    >
-      <option value="">{title}</option>
-      {options.map((o: string) => (
-        <option key={o} value={o}>{o}</option>
-      ))}
-    </select>
-  );
+  const DropdownPicker = ({ value, onChange, options, title }: DropdownProps) => {
+    const [open, setOpen] = useState(false);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const popoverRef = useRef<HTMLDivElement>(null);
+    const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ display: 'none' });
+
+    useEffect(() => {
+      const handler = (e: MouseEvent) => {
+        if (popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+            triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+          setOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const openPopover = () => {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        let left = rect.left;
+        const popoverWidth = 170;
+        if (left + popoverWidth > window.innerWidth - 8) {
+          left = window.innerWidth - popoverWidth - 8;
+        }
+        setPopoverStyle({
+          position: 'fixed',
+          top: rect.bottom + 4,
+          left,
+          zIndex: 30,
+          background: 'white',
+          border: '1.5px solid #e7e5e4',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+          padding: '4px',
+          maxHeight: '280px',
+          overflowY: 'auto',
+          minWidth: popoverWidth + 'px',
+        });
+      }
+      setOpen(true);
+    };
+
+    return (
+      <div style={{ display: 'inline-flex', position: 'static' }}>
+        <button
+          ref={triggerRef}
+          onClick={() => open ? setOpen(false) : openPopover()}
+          onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
+          style={{
+            padding: '6px 7px', border: 'none', background: open ? '#fff7ed' : 'transparent',
+            color: '#78716c', borderRadius: '8px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '3px', fontSize: '13px', flexShrink: 0,
+            outline: 'none', maxWidth: '100px',
+          }}
+          onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = '#f5f5f4'; }}
+          onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
+          title={title}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {value || title}
+          </span>
+          <ChevronDown size={12} style={{ flexShrink: 0 }} />
+        </button>
+        {open && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 20 }} onClick={() => setOpen(false)} />
+            <div ref={popoverRef} style={popoverStyle}>
+              <button
+                onClick={() => { onChange(''); setOpen(false); }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left', fontSize: '13px',
+                  padding: '6px 10px', border: 'none', background: value === '' ? '#fff7ed' : 'none',
+                  color: '#78716c', cursor: 'pointer', borderRadius: '6px',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
+                onMouseLeave={(e) => e.currentTarget.style.background = value === '' ? '#fff7ed' : 'none'}
+              >
+                {title}
+              </button>
+              {options.map((o) => (
+                <button
+                  key={o}
+                  onClick={() => { onChange(o); setOpen(false); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '6px 10px', border: 'none', background: value === o ? '#fff7ed' : 'none',
+                    color: '#292524', cursor: 'pointer', borderRadius: '6px',
+                    fontFamily: title === 'Font' ? o : undefined,
+                    fontSize: title === 'Size' ? Number(o) + 'px' : '13px',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = value === o ? '#fff7ed' : 'none'}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   const Divider = () => <div style={{ width: '1px', height: '20px', background: '#e7e5e4', margin: '0 3px', flexShrink: 0 }} />;
 
@@ -212,8 +295,8 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
       {tableGroup}
-      <Select value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
-      <Select value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
+      <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
+      <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
       <ColorPicker
         currentColor={editor.getAttributes('textStyle').color}
         onColorChange={(c) => editor.chain().focus().setColor(c).run()}
