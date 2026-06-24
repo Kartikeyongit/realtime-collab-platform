@@ -69,10 +69,12 @@ export function EmojiPicker({ onSelect }: EmojiPickerProps) {
       <button
         ref={triggerRef}
         onClick={() => open ? setOpen(false) : openPopover()}
+        onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
         style={{
           padding: '6px 7px', border: 'none', background: open ? '#fff7ed' : 'transparent',
           color: '#78716c', borderRadius: '8px', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0,
+          outline: 'none',
         }}
         onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = '#f5f5f4'; }}
         onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}

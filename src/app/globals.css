@@ -697,6 +697,10 @@ body.editor-focus .editor-content-area .ProseMirror {
   outline-offset: -2px;
   border-radius: 4px;
 }
+body.editor-focus [data-focus-toggle] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
 
 /* Hide scrollbar in toolbar */
 .toolbar-area {

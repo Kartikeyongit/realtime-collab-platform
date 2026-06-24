@@ -2,6 +2,7 @@
 
 import { Editor } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import {
   Bold, Italic, Underline, Strikethrough,
   List, ListOrdered, Quote, Code, Code2,
@@ -11,6 +12,7 @@ import {
   Highlighter, Minus, Table, CheckSquare,
   Subscript, Superscript, RemoveFormatting,
   Indent, Outdent, Focus, Columns, Rows, Trash2,
+  type LucideIcon,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { EmojiPicker } from './EmojiPicker';
@@ -40,6 +42,18 @@ export function Toolbar({ editor }: ToolbarProps) {
     editor.on('selectionUpdate', update);
     return () => { editor.off('selectionUpdate', update); };
   }, [editor]);
+
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setFocusMode(false);
+        document.body.classList.remove('editor-focus');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [focusMode]);
 
   if (!editor) return null;
 
@@ -102,7 +116,14 @@ export function Toolbar({ editor }: ToolbarProps) {
     { icon: Trash2, action: () => editor.chain().focus().deleteRow().run(), title: 'Delete row' },
   ];
 
-  const ToolButton = ({ icon: Icon, action, active, title }: any) => (
+  interface ToolButtonProps {
+    icon: LucideIcon;
+    action: () => void;
+    active: () => boolean;
+    title?: string;
+  }
+
+  const ToolButton = ({ icon: Icon, action, active, title }: ToolButtonProps) => (
     <button
       onClick={action}
       onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
@@ -123,10 +144,18 @@ export function Toolbar({ editor }: ToolbarProps) {
     </button>
   );
 
-  const Select = ({ value, onChange, options, title }: any) => (
+  interface SelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: string[];
+    title: string;
+  }
+
+  const Select = ({ value, onChange, options, title }: SelectProps) => (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
       title={title}
       style={{
         padding: '6px 7px', border: 'none', borderRadius: '8px',
@@ -149,9 +178,10 @@ export function Toolbar({ editor }: ToolbarProps) {
   const tableGroup = (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '0px',
-      opacity: isTable ? 1 : 0, pointerEvents: isTable ? 'auto' : 'none',
-      transition: 'opacity 0.1s ease',
-      marginRight: isTable ? '0px' : '-1px',
+      overflow: 'hidden', whiteSpace: 'nowrap',
+      maxWidth: isTable ? '250px' : '0px',
+      opacity: isTable ? 1 : 0,
+      transition: 'all 0.2s ease',
     }}>
       {tableTools.map((t, i) => (
         <ToolButton key={`tt-${i}`} icon={t.icon} action={t.action} active={() => false} title={t.title} />
@@ -182,8 +212,8 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
       {tableGroup}
-      <Select value={fontFamily} onChange={(v: string) => { setFontFamily(v); editor.chain().focus().setFontFamily(v).run(); }} options={FONT_FAMILIES} title="Font" />
-      <Select value={fontSize} onChange={(v: string) => { setFontSize(v); editor.chain().focus().setFontSize(v).run(); }} options={FONT_SIZES} title="Size" />
+      <Select value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
+      <Select value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
       <ColorPicker
         currentColor={editor.getAttributes('textStyle').color}
         onColorChange={(c) => editor.chain().focus().setColor(c).run()}
@@ -198,7 +228,25 @@ export function Toolbar({ editor }: ToolbarProps) {
       <EmojiPicker onSelect={(emoji) => editor.chain().focus().insertContent(emoji).run()} />
       <div style={{ flex: 1 }} />
       <ToolButton icon={RemoveFormatting} action={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} active={() => false} title="Clear formatting" />
-      <ToolButton icon={Focus} action={toggleFocus} active={() => focusMode} title="Focus mode" />
+      <button
+        onClick={toggleFocus}
+        onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
+        data-focus-toggle="true"
+        style={{
+          padding: '6px 7px', border: 'none',
+          background: focusMode ? '#fff7ed' : 'transparent',
+          color: focusMode ? '#f97316' : '#78716c',
+          borderRadius: '8px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.15s ease', fontSize: '14px', flexShrink: 0,
+          outline: 'none',
+        }}
+        onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.background = '#f5f5f4'; }}
+        onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.background = 'transparent'; }}
+        title="Focus mode"
+      >
+        <Focus size={16} />
+      </button>
       <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo" />
       <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo" />
     </div>
