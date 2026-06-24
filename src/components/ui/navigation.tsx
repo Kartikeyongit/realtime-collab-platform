@@ -6,12 +6,13 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import axios from 'axios';
 import { showError } from '@/lib/toast';
-import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate } from 'lucide-react';
+import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, Menu, X } from 'lucide-react';
 
 export function Navigation() {
   const { data: session } = useSession();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const handleNewDocument = async () => {
@@ -51,14 +52,19 @@ export function Navigation() {
           </Link>
           {session && (
             <>
-              <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <LayoutDashboard size={15} />
-                Documents
-              </Link>
-              <Link href="/templates" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <LayoutTemplate size={15} />
-                Templates
-              </Link>
+              <span className="nav-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+                <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <LayoutDashboard size={15} />
+                  Documents
+                </Link>
+                <Link href="/templates" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <LayoutTemplate size={15} />
+                  Templates
+                </Link>
+              </span>
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="nav-show-mobile" style={{ alignItems: 'center', justifyContent: 'center', padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: '#78716c' }}>
+                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
             </>
           )}
         </div>
@@ -113,6 +119,26 @@ export function Navigation() {
           )}
         </div>
       </div>
+      {session && mobileMenuOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 30 }} onClick={() => setMobileMenuOpen(false)} />
+          <div className="dropdown nav-show-mobile" style={{ display: 'none', position: 'absolute', left: '12px', top: '52px', zIndex: 40, width: 'calc(100vw - 24px)', maxWidth: '320px' }}>
+            <button onClick={() => { setMobileMenuOpen(false); router.push('/dashboard'); }} className="dropdown-item">
+              <LayoutDashboard size={15} /> Dashboard
+            </button>
+            <button onClick={() => { setMobileMenuOpen(false); router.push('/templates'); }} className="dropdown-item">
+              <LayoutTemplate size={15} /> Templates
+            </button>
+            <div className="dropdown-divider" />
+            <button onClick={() => { setMobileMenuOpen(false); router.push('/trash'); }} className="dropdown-item">
+              <Trash2 size={15} /> Trash
+            </button>
+            <button onClick={() => { setMobileMenuOpen(false); router.push('/settings'); }} className="dropdown-item">
+              <Settings size={15} /> Settings
+            </button>
+          </div>
+        </>
+      )}
     </nav>
   );
 }

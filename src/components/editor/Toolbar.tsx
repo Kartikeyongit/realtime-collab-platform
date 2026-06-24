@@ -191,37 +191,6 @@ export function Toolbar({ editor }: ToolbarProps) {
     e.target.value = '';
   }, [editor]);
 
-  const tools = [
-    { icon: Bold, action: () => editor.chain().focus().toggleBold().run(), active: () => editor.isActive('bold') },
-    { icon: Italic, action: () => editor.chain().focus().toggleItalic().run(), active: () => editor.isActive('italic') },
-    { icon: Underline, action: () => editor.chain().focus().toggleUnderline().run(), active: () => editor.isActive('underline') },
-    { icon: Strikethrough, action: () => editor.chain().focus().toggleStrike().run(), active: () => editor.isActive('strike') },
-    { icon: Code, action: () => editor.chain().focus().toggleCode().run(), active: () => editor.isActive('code') },
-    { icon: Highlighter, action: () => editor.chain().focus().toggleHighlight().run(), active: () => editor.isActive('highlight') },
-  ];
-
-  const headings = [
-    { icon: Heading1, action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), active: () => editor.isActive('heading', { level: 1 }) },
-    { icon: Heading2, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active: () => editor.isActive('heading', { level: 2 }) },
-    { icon: Heading3, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: () => editor.isActive('heading', { level: 3 }) },
-    { icon: Heading4, action: () => editor.chain().focus().toggleHeading({ level: 4 }).run(), active: () => editor.isActive('heading', { level: 4 }) },
-    { icon: Heading5, action: () => editor.chain().focus().toggleHeading({ level: 5 }).run(), active: () => editor.isActive('heading', { level: 5 }) },
-    { icon: Heading6, action: () => editor.chain().focus().toggleHeading({ level: 6 }).run(), active: () => editor.isActive('heading', { level: 6 }) },
-  ];
-
-  const aligns = [
-    { icon: AlignLeft, action: () => editor.chain().focus().setTextAlign('left').run(), active: () => editor.isActive({ textAlign: 'left' }) },
-    { icon: AlignCenter, action: () => editor.chain().focus().setTextAlign('center').run(), active: () => editor.isActive({ textAlign: 'center' }) },
-    { icon: AlignRight, action: () => editor.chain().focus().setTextAlign('right').run(), active: () => editor.isActive({ textAlign: 'right' }) },
-  ];
-
-  const lists = [
-    { icon: List, action: () => editor.chain().focus().toggleBulletList().run(), active: () => editor.isActive('bulletList') },
-    { icon: ListOrdered, action: () => editor.chain().focus().toggleOrderedList().run(), active: () => editor.isActive('orderedList') },
-    { icon: CheckSquare, action: () => editor.chain().focus().toggleTaskList().run(), active: () => editor.isActive('taskList') },
-    { icon: Quote, action: () => editor.chain().focus().toggleBlockquote().run(), active: () => editor.isActive('blockquote') },
-  ];
-
   const isTable = editor.isActive('table');
   const tableTools = [
     { icon: Columns, action: () => editor.chain().focus().addColumnAfter().run(), title: 'Add column after' },
@@ -284,56 +253,85 @@ export function Toolbar({ editor }: ToolbarProps) {
       overflowX: 'auto', flexShrink: 0,
       scrollbarWidth: 'none', msOverflowStyle: 'none',
     }}>
-      {tools.map((t, i) => <ToolButton key={`t-${i}`} {...t} />)}
+      {/* Primary formatting — always visible */}
+      <ToolButton icon={Bold} action={() => editor.chain().focus().toggleBold().run()} active={() => editor.isActive('bold')} />
+      <ToolButton icon={Italic} action={() => editor.chain().focus().toggleItalic().run()} active={() => editor.isActive('italic')} />
+      <ToolButton icon={Underline} action={() => editor.chain().focus().toggleUnderline().run()} active={() => editor.isActive('underline')} />
+      <span className="hide-mobile">
+        <ToolButton icon={Strikethrough} action={() => editor.chain().focus().toggleStrike().run()} active={() => editor.isActive('strike')} />
+        <ToolButton icon={Code} action={() => editor.chain().focus().toggleCode().run()} active={() => editor.isActive('code')} />
+        <ToolButton icon={Highlighter} action={() => editor.chain().focus().toggleHighlight().run()} active={() => editor.isActive('highlight')} />
+      </span>
       <Divider />
-      {headings.map((t, i) => <ToolButton key={`h-${i}`} {...t} />)}
+      {/* H1-H3 always visible, H4-H6 hidden on mobile */}
+      <ToolButton icon={Heading1} action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={() => editor.isActive('heading', { level: 1 })} />
+      <ToolButton icon={Heading2} action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={() => editor.isActive('heading', { level: 2 })} />
+      <ToolButton icon={Heading3} action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={() => editor.isActive('heading', { level: 3 })} />
+      <span className="hide-mobile">
+        <ToolButton icon={Heading4} action={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={() => editor.isActive('heading', { level: 4 })} />
+        <ToolButton icon={Heading5} action={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={() => editor.isActive('heading', { level: 5 })} />
+        <ToolButton icon={Heading6} action={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={() => editor.isActive('heading', { level: 6 })} />
+      </span>
+      <span className="hide-mobile">
+        <Divider />
+        <ToolButton icon={AlignLeft} action={() => editor.chain().focus().setTextAlign('left').run()} active={() => editor.isActive({ textAlign: 'left' })} />
+        <ToolButton icon={AlignCenter} action={() => editor.chain().focus().setTextAlign('center').run()} active={() => editor.isActive({ textAlign: 'center' })} />
+        <ToolButton icon={AlignRight} action={() => editor.chain().focus().setTextAlign('right').run()} active={() => editor.isActive({ textAlign: 'right' })} />
+      </span>
       <Divider />
-      {aligns.map((t, i) => <ToolButton key={`a-${i}`} {...t} />)}
+      <ToolButton icon={List} action={() => editor.chain().focus().toggleBulletList().run()} active={() => editor.isActive('bulletList')} />
+      <ToolButton icon={ListOrdered} action={() => editor.chain().focus().toggleOrderedList().run()} active={() => editor.isActive('orderedList')} />
+      <ToolButton icon={CheckSquare} action={() => editor.chain().focus().toggleTaskList().run()} active={() => editor.isActive('taskList')} />
+      <ToolButton icon={Quote} action={() => editor.chain().focus().toggleBlockquote().run()} active={() => editor.isActive('blockquote')} />
       <Divider />
-      {lists.map((t, i) => <ToolButton key={`l-${i}`} {...t} />)}
-      <Divider />
+      {/* Insert group */}
       <ToolButton icon={Table} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={() => editor.isActive('table')} title="Table" />
       <ToolButton icon={Image} action={() => imageInputRef.current?.click()} active={() => false} title="Insert image" />
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
       <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
-      <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
+      <span className="hide-mobile">
+        <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
+      </span>
       <Divider />
-      {tableGroup}
-      <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
-      <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
-      <ColorPicker
-        currentColor={editor.getAttributes('textStyle').color}
-        onColorChange={(c) => editor.chain().focus().setColor(c).run()}
-        onRemoveColor={() => editor.chain().focus().unsetColor().run()}
-      />
-      <Divider />
-      <ToolButton icon={Subscript} action={() => editor.chain().focus().toggleSubscript().run()} active={() => editor.isActive('subscript')} title="Subscript" />
-      <ToolButton icon={Superscript} action={() => editor.chain().focus().toggleSuperscript().run()} active={() => editor.isActive('superscript')} title="Superscript" />
-      <ToolButton icon={Code2} action={() => editor.chain().focus().toggleCodeBlock().run()} active={() => editor.isActive('codeBlock')} title="Code block" />
-      <ToolButton icon={Indent} action={() => editor.chain().focus().sinkListItem('listItem').run()} active={() => false} title="Indent" />
-      <ToolButton icon={Outdent} action={() => editor.chain().focus().liftListItem('listItem').run()} active={() => false} title="Outdent" />
-      <EmojiPicker onSelect={(emoji) => editor.chain().focus().insertContent(emoji).run()} />
+      {/* Secondary tools — hidden on mobile */}
+      <span className="hide-mobile">
+        {tableGroup}
+        <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
+        <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
+        <ColorPicker
+          currentColor={editor.getAttributes('textStyle').color}
+          onColorChange={(c) => editor.chain().focus().setColor(c).run()}
+          onRemoveColor={() => editor.chain().focus().unsetColor().run()}
+        />
+        <Divider />
+        <ToolButton icon={Subscript} action={() => editor.chain().focus().toggleSubscript().run()} active={() => editor.isActive('subscript')} title="Subscript" />
+        <ToolButton icon={Superscript} action={() => editor.chain().focus().toggleSuperscript().run()} active={() => editor.isActive('superscript')} title="Superscript" />
+        <ToolButton icon={Code2} action={() => editor.chain().focus().toggleCodeBlock().run()} active={() => editor.isActive('codeBlock')} title="Code block" />
+        <ToolButton icon={Indent} action={() => editor.chain().focus().sinkListItem('listItem').run()} active={() => false} title="Indent" />
+        <ToolButton icon={Outdent} action={() => editor.chain().focus().liftListItem('listItem').run()} active={() => false} title="Outdent" />
+        <EmojiPicker onSelect={(emoji) => editor.chain().focus().insertContent(emoji).run()} />
+        <ToolButton icon={RemoveFormatting} action={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} active={() => false} title="Clear formatting" />
+        <button
+          onClick={toggleFocus}
+          onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
+          data-focus-toggle="true"
+          style={{
+            padding: '6px 7px', border: 'none',
+            background: focusMode ? '#fff7ed' : 'transparent',
+            color: focusMode ? '#f97316' : '#78716c',
+            borderRadius: '8px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.15s ease', fontSize: '14px', flexShrink: 0,
+            outline: 'none',
+          }}
+          onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.background = '#f5f5f4'; }}
+          onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.background = 'transparent'; }}
+          title="Focus mode"
+        >
+          <Focus size={16} />
+        </button>
+      </span>
       <div style={{ flex: 1 }} />
-      <ToolButton icon={RemoveFormatting} action={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} active={() => false} title="Clear formatting" />
-      <button
-        onClick={toggleFocus}
-        onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
-        data-focus-toggle="true"
-        style={{
-          padding: '6px 7px', border: 'none',
-          background: focusMode ? '#fff7ed' : 'transparent',
-          color: focusMode ? '#f97316' : '#78716c',
-          borderRadius: '8px', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.15s ease', fontSize: '14px', flexShrink: 0,
-          outline: 'none',
-        }}
-        onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.background = '#f5f5f4'; }}
-        onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.background = 'transparent'; }}
-        title="Focus mode"
-      >
-        <Focus size={16} />
-      </button>
       <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo" />
       <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo" />
     </div>

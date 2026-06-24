@@ -710,3 +710,32 @@ body.editor-focus [data-focus-toggle] {
 .toolbar-area ::-webkit-scrollbar {
   display: none;
 }
+
+/* Tablet: hide non-essential toolbar tools */
+@media (max-width: 1024px) {
+  .toolbar-hide-tablet {
+    display: none !important;
+  }
+}
+
+/* Mobile nav: hide desktop links, show hamburger */
+@media (max-width: 640px) {
+  .nav-hide-mobile {
+    display: none !important;
+  }
+  .nav-show-mobile {
+    display: flex !important;
+  }
+  /* Dashboard cards on mobile */
+  .dashboard-search {
+    max-width: 100% !important;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  /* Document header metadata: hide presence + extra info */
+  .meta-hide-phone {
+    display: none !important;
+  }
+}

@@ -170,13 +170,17 @@ export default function DocumentPage() {
                   <WifiOff size={10} /> Connecting...
                 </span>
               )}
-              <span style={{ color: '#d6d3d1' }}>·</span>
-              <WordCount editor={editorInstance} />
-              <span style={{ color: '#d6d3d1' }}>·</span>
-              <Clock size={10} />
-              <span>{document?.updatedAt ? formatDistanceToNow(new Date(document.updatedAt), { addSuffix: true }) : 'Just now'}</span>
-              {document?.owner && <><span style={{ color: '#d6d3d1' }}>·</span><span>{document.owner.name}</span></>}
-              <PresenceIndicators />
+              <span className="meta-hide-phone" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: '#d6d3d1' }}>·</span>
+                <WordCount editor={editorInstance} />
+              </span>
+              <span className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: '#d6d3d1' }}>·</span>
+                <Clock size={10} />
+                <span>{document?.updatedAt ? formatDistanceToNow(new Date(document.updatedAt), { addSuffix: true }) : 'Just now'}</span>
+                {document?.owner && <><span style={{ color: '#d6d3d1' }}>·</span><span>{document.owner.name}</span></>}
+                <PresenceIndicators />
+              </span>
             </div>
           </div>
         </div>

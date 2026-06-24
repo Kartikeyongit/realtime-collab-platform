@@ -41,7 +41,7 @@ export function EmojiPicker({ onSelect }: EmojiPickerProps) {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       let left = rect.left;
-      const popoverWidth = 300;
+      const popoverWidth = Math.min(300, window.innerWidth - 24);
       if (left + popoverWidth > window.innerWidth - 8) {
         left = window.innerWidth - popoverWidth - 8;
       }
@@ -55,9 +55,9 @@ export function EmojiPicker({ onSelect }: EmojiPickerProps) {
         borderRadius: '12px',
         boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
         padding: '6px',
-        width: '300px',
+        width: popoverWidth + 'px',
         display: 'grid',
-        gridTemplateColumns: 'repeat(10, 1fr)',
+        gridTemplateColumns: `repeat(${Math.max(8, Math.floor(popoverWidth / 30))}, 1fr)`,
         gap: '2px',
       });
     }

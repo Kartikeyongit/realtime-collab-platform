@@ -92,7 +92,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '340px' }}>
+      <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '340px' }} className="dashboard-search">
         <Search size={15} color="#a8a29e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
         <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px', paddingRight: '36px' }} />
         {refetching && (
@@ -124,9 +124,11 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                {doc.collaborators.slice(0, 2).map((c, i) => (
-                  <div key={i} className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', marginLeft: i > 0 ? '-8px' : 0, border: '2px solid white' }}>{c.user.name?.charAt(0) || '?'}</div>
-                ))}
+                <span className="hide-mobile" style={{ display: 'flex', alignItems: 'center' }}>
+                  {doc.collaborators.slice(0, 2).map((c, i) => (
+                    <div key={i} className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', marginLeft: i > 0 ? '-8px' : 0, border: '2px solid white' }}>{c.user.name?.charAt(0) || '?'}</div>
+                  ))}
+                </span>
                 <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(doc); }} className="btn btn-ghost btn-sm" style={{ color: '#d6d3d1', padding: '4px' }}>
                   <Trash2 size={13} />
                 </button>
