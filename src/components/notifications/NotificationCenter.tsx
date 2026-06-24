@@ -87,7 +87,7 @@ export function NotificationCenter() {
       {isOpen && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 30 }} onClick={() => setIsOpen(false)} />
-          <div className="dropdown" style={{ width: '340px', right: 0 }}>
+          <div className="dropdown notification-dropdown" style={{ right: 0 }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontWeight: 600, fontSize: '14px' }}>Notifications</span>
               {unread > 0 && (

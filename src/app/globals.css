@@ -642,6 +642,13 @@ html {
     padding: 16px !important;
   }
 
+  /* Notification panel responsive */
+  .notification-dropdown {
+    width: calc(100vw - 32px) !important;
+    max-width: 340px !important;
+    right: -8px !important;
+  }
+
   /* Comment panel full-width on mobile */
   [id*="comment-thread"] {
     position: fixed !important;
