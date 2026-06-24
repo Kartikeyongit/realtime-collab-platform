@@ -1,7 +1,7 @@
 'use client';
 
 import { Editor } from '@tiptap/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Bold, Italic, Underline, Strikethrough,
   List, ListOrdered, Quote, Code, Code2,
@@ -10,8 +10,7 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Minus, Table, CheckSquare,
   Subscript, Superscript, RemoveFormatting,
-  Indent, Outdent, Focus,
-  Rows, Columns,
+  Indent, Outdent, Focus, Columns, Rows, Trash2,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { EmojiPicker } from './EmojiPicker';
@@ -31,6 +30,16 @@ export function Toolbar({ editor }: ToolbarProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [fontFamily, setFontFamily] = useState('');
   const [fontSize, setFontSize] = useState('');
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      setFontFamily(editor.getAttributes('textStyle')?.fontFamily || '');
+      setFontSize(editor.getAttributes('fontSize')?.size || '');
+    };
+    editor.on('selectionUpdate', update);
+    return () => { editor.off('selectionUpdate', update); };
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -84,11 +93,19 @@ export function Toolbar({ editor }: ToolbarProps) {
   ];
 
   const isTable = editor.isActive('table');
+  const tableTools = [
+    { icon: Columns, action: () => editor.chain().focus().addColumnAfter().run(), title: 'Add column after' },
+    { icon: Columns, action: () => editor.chain().focus().addColumnBefore().run(), title: 'Add column before' },
+    { icon: Rows, action: () => editor.chain().focus().addRowAfter().run(), title: 'Add row after' },
+    { icon: Rows, action: () => editor.chain().focus().addRowBefore().run(), title: 'Add row before' },
+    { icon: Trash2, action: () => editor.chain().focus().deleteColumn().run(), title: 'Delete column' },
+    { icon: Trash2, action: () => editor.chain().focus().deleteRow().run(), title: 'Delete row' },
+  ];
 
   const ToolButton = ({ icon: Icon, action, active, title }: any) => (
     <button
       onClick={action}
-      onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); action(); }}
+      onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
       style={{
         padding: '6px 7px', border: 'none',
         background: active() ? '#fff7ed' : 'transparent',
@@ -96,6 +113,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         borderRadius: '8px', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all 0.15s ease', fontSize: '14px', flexShrink: 0,
+        outline: 'none',
       }}
       onMouseEnter={(e) => { if (!active()) e.currentTarget.style.background = '#f5f5f4'; }}
       onMouseLeave={(e) => { if (!active()) e.currentTarget.style.background = 'transparent'; }}
@@ -111,10 +129,13 @@ export function Toolbar({ editor }: ToolbarProps) {
       onChange={(e) => onChange(e.target.value)}
       title={title}
       style={{
-        padding: '4px 6px', border: '1px solid #e7e5e4', borderRadius: '8px',
-        background: 'white', fontSize: '12px', color: '#57534e', cursor: 'pointer',
-        maxWidth: '110px', flexShrink: 0,
+        padding: '6px 7px', border: 'none', borderRadius: '8px',
+        background: 'transparent', fontSize: '13px', color: '#78716c',
+        cursor: 'pointer', maxWidth: '100px', flexShrink: 0,
+        outline: 'none',
       }}
+      onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
+      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
       <option value="">{title}</option>
       {options.map((o: string) => (
@@ -125,11 +146,26 @@ export function Toolbar({ editor }: ToolbarProps) {
 
   const Divider = () => <div style={{ width: '1px', height: '20px', background: '#e7e5e4', margin: '0 3px', flexShrink: 0 }} />;
 
+  const tableGroup = (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0px',
+      opacity: isTable ? 1 : 0, pointerEvents: isTable ? 'auto' : 'none',
+      transition: 'opacity 0.1s ease',
+      marginRight: isTable ? '0px' : '-1px',
+    }}>
+      {tableTools.map((t, i) => (
+        <ToolButton key={`tt-${i}`} icon={t.icon} action={t.action} active={() => false} title={t.title} />
+      ))}
+      <Divider />
+    </div>
+  );
+
   return (
     <div style={{
       background: 'white', borderBottom: '1.5px solid #e7e5e4',
       padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '1px',
       overflowX: 'auto', flexShrink: 0,
+      scrollbarWidth: 'none', msOverflowStyle: 'none',
     }}>
       {tools.map((t, i) => <ToolButton key={`t-${i}`} {...t} />)}
       <Divider />
@@ -145,17 +181,7 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
       <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
-      {isTable && (
-        <>
-          <ToolButton icon={Columns} title="Add column after" action={() => editor.chain().focus().addColumnAfter().run()} active={() => false} />
-          <ToolButton icon={Columns} title="Add column before" action={() => editor.chain().focus().addColumnBefore().run()} active={() => false} />
-          <ToolButton icon={Rows} title="Add row after" action={() => editor.chain().focus().addRowAfter().run()} active={() => false} />
-          <ToolButton icon={Rows} title="Add row before" action={() => editor.chain().focus().addRowBefore().run()} active={() => false} />
-          <ToolButton icon={RemoveFormatting} title="Delete column" action={() => editor.chain().focus().deleteColumn().run()} active={() => false} />
-          <ToolButton icon={RemoveFormatting} title="Delete row" action={() => editor.chain().focus().deleteRow().run()} active={() => false} />
-          <Divider />
-        </>
-      )}
+      {tableGroup}
       <Select value={fontFamily} onChange={(v: string) => { setFontFamily(v); editor.chain().focus().setFontFamily(v).run(); }} options={FONT_FAMILIES} title="Font" />
       <Select value={fontSize} onChange={(v: string) => { setFontSize(v); editor.chain().focus().setFontSize(v).run(); }} options={FONT_SIZES} title="Size" />
       <ColorPicker

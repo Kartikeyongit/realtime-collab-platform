@@ -20,11 +20,14 @@ interface ColorPickerProps {
 
 export function ColorPicker({ currentColor, onColorChange, onRemoveColor }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ display: 'none' });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+          triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -32,10 +35,38 @@ export function ColorPicker({ currentColor, onColorChange, onRemoveColor }: Colo
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const openPopover = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      let left = rect.left;
+      const popoverWidth = 184;
+      if (left + popoverWidth > window.innerWidth - 8) {
+        left = window.innerWidth - popoverWidth - 8;
+      }
+      setPopoverStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left,
+        zIndex: 30,
+        background: 'white',
+        border: '1.5px solid #e7e5e4',
+        borderRadius: '12px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+        padding: '8px',
+        width: '184px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(6, 1fr)',
+        gap: '3px',
+      });
+    }
+    setOpen(true);
+  };
+
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
+    <div style={{ display: 'inline-flex', position: 'static' }}>
       <button
-        onClick={() => setOpen(!open)}
+        ref={triggerRef}
+        onClick={() => open ? setOpen(false) : openPopover()}
         style={{
           padding: '6px 7px', border: 'none', background: open ? '#fff7ed' : 'transparent',
           color: '#78716c', borderRadius: '8px', cursor: 'pointer',
@@ -51,12 +82,7 @@ export function ColorPicker({ currentColor, onColorChange, onRemoveColor }: Colo
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 20 }} onClick={() => setOpen(false)} />
-          <div style={{
-            position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 30,
-            background: 'white', border: '1.5px solid #e7e5e4', borderRadius: '12px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '8px',
-            width: '184px', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '3px',
-          }}>
+          <div ref={popoverRef} style={popoverStyle}>
             {onRemoveColor && (
               <button
                 onClick={() => { onRemoveColor(); setOpen(false); }}

@@ -697,3 +697,12 @@ body.editor-focus .editor-content-area .ProseMirror {
   outline-offset: -2px;
   border-radius: 4px;
 }
+
+/* Hide scrollbar in toolbar */
+.toolbar-area {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.toolbar-area ::-webkit-scrollbar {
+  display: none;
+}
