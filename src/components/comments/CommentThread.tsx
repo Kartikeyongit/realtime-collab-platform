@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Reply, Trash2, Check, Send } from 'lucide-react';
+import { MessageSquare, Reply, Trash2, Check, Send, X } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
 
 interface Comment {
@@ -21,13 +21,14 @@ interface CommentThreadProps {
   comments: Comment[];
   onResolve?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onClose?: () => void;
   documentId?: string;
   editor?: Editor | null;
   emitComment?: (comment: any) => void;
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-export function CommentThread({ comments, onResolve, onDelete, documentId, editor, emitComment, addToast }: CommentThreadProps) {
+export function CommentThread({ comments, onResolve, onDelete, onClose, documentId, editor, emitComment, addToast }: CommentThreadProps) {
   const { data: session } = useSession();
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -67,6 +68,12 @@ export function CommentThread({ comments, onResolve, onDelete, documentId, edito
         <MessageSquare size={16} color="#f97316" />
         <h3 style={{ fontWeight: 600, fontSize: '14px' }}>Comments</h3>
         <span style={{ fontSize: '12px', color: '#a8a29e', background: '#f5f5f4', padding: '2px 8px', borderRadius: '10px' }}>{comments.length}</span>
+        <div style={{ flex: 1 }} />
+        {onClose && (
+          <button onClick={onClose} style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: '#a8a29e', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'} title="Close">
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>

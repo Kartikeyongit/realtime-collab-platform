@@ -233,6 +233,7 @@ export default function DocumentPage() {
             documentId={documentId}
             editor={editorInstance}
             emitComment={emitComment}
+            onClose={() => setShowComments(false)}
             onResolve={async (id) => { 
               await axios.patch(`/api/documents/${documentId}/comments/${id}`, { resolved: true }); 
               const updatedComments = (document?.comments || []).map(c => 
