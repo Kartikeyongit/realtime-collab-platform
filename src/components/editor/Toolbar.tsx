@@ -257,27 +257,21 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Bold} action={() => editor.chain().focus().toggleBold().run()} active={() => editor.isActive('bold')} />
       <ToolButton icon={Italic} action={() => editor.chain().focus().toggleItalic().run()} active={() => editor.isActive('italic')} />
       <ToolButton icon={Underline} action={() => editor.chain().focus().toggleUnderline().run()} active={() => editor.isActive('underline')} />
-      <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
         <ToolButton icon={Strikethrough} action={() => editor.chain().focus().toggleStrike().run()} active={() => editor.isActive('strike')} />
         <ToolButton icon={Code} action={() => editor.chain().focus().toggleCode().run()} active={() => editor.isActive('code')} />
         <ToolButton icon={Highlighter} action={() => editor.chain().focus().toggleHighlight().run()} active={() => editor.isActive('highlight')} />
-      </div>
       <Divider />
       {/* H1-H3 always visible, H4-H6 hidden on mobile */}
       <ToolButton icon={Heading1} action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={() => editor.isActive('heading', { level: 1 })} />
       <ToolButton icon={Heading2} action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={() => editor.isActive('heading', { level: 2 })} />
       <ToolButton icon={Heading3} action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={() => editor.isActive('heading', { level: 3 })} />
-      <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
         <ToolButton icon={Heading4} action={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={() => editor.isActive('heading', { level: 4 })} />
         <ToolButton icon={Heading5} action={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={() => editor.isActive('heading', { level: 5 })} />
         <ToolButton icon={Heading6} action={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={() => editor.isActive('heading', { level: 6 })} />
-      </div>
-      <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
         <Divider />
         <ToolButton icon={AlignLeft} action={() => editor.chain().focus().setTextAlign('left').run()} active={() => editor.isActive({ textAlign: 'left' })} />
         <ToolButton icon={AlignCenter} action={() => editor.chain().focus().setTextAlign('center').run()} active={() => editor.isActive({ textAlign: 'center' })} />
         <ToolButton icon={AlignRight} action={() => editor.chain().focus().setTextAlign('right').run()} active={() => editor.isActive({ textAlign: 'right' })} />
-      </div>
       <Divider />
       <ToolButton icon={List} action={() => editor.chain().focus().toggleBulletList().run()} active={() => editor.isActive('bulletList')} />
       <ToolButton icon={ListOrdered} action={() => editor.chain().focus().toggleOrderedList().run()} active={() => editor.isActive('orderedList')} />
@@ -289,12 +283,9 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Image} action={() => imageInputRef.current?.click()} active={() => false} title="Insert image" />
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
       <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
-      <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
         <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
-      </div>
       <Divider />
       {/* Secondary tools — hidden on mobile */}
-      <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
         {tableGroup}
         <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
         <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
@@ -330,7 +321,6 @@ export function Toolbar({ editor }: ToolbarProps) {
         >
           <Focus size={16} />
         </button>
-      </div>
       <div style={{ flex: 1 }} />
       <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo" />
       <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo" />
