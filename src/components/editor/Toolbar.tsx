@@ -24,6 +24,121 @@ const FONT_FAMILIES = [
 ];
 const FONT_SIZES = ['10', '11', '12', '13', '14', '16', '18', '20', '24', '28', '32', '36', '48', '72'];
 
+function cssFontName(name: string) {
+  return name.includes(' ') ? `"${name}"` : name;
+}
+
+interface DropdownProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  title: string;
+}
+
+function DropdownPicker({ value, onChange, options, title }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ display: 'none' });
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+          triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const openPopover = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      let left = rect.left;
+      const popoverWidth = 170;
+      if (left + popoverWidth > window.innerWidth - 8) {
+        left = window.innerWidth - popoverWidth - 8;
+      }
+      setPopoverStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left,
+        zIndex: 30,
+        background: 'white',
+        border: '1.5px solid #e7e5e4',
+        borderRadius: '12px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+        padding: '4px',
+        maxHeight: '280px',
+        overflowY: 'auto',
+        minWidth: popoverWidth + 'px',
+      });
+    }
+    setOpen(true);
+  };
+
+  return (
+    <div style={{ display: 'inline-flex', position: 'static' }}>
+      <button
+        ref={triggerRef}
+        onClick={() => open ? setOpen(false) : openPopover()}
+        onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
+        style={{
+          padding: '6px 7px', border: 'none', background: open ? '#fff7ed' : 'transparent',
+          color: '#78716c', borderRadius: '8px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '3px', fontSize: '13px', flexShrink: 0,
+          outline: 'none', maxWidth: '100px',
+        }}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = '#f5f5f4'; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
+        title={title}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {value || title}
+        </span>
+        <ChevronDown size={12} style={{ flexShrink: 0 }} />
+      </button>
+      {open && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 20 }} onClick={() => setOpen(false)} />
+          <div ref={popoverRef} style={popoverStyle}>
+            <button
+              onClick={() => { onChange(''); setOpen(false); }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left', fontSize: '13px',
+                padding: '6px 10px', border: 'none', background: value === '' ? '#fff7ed' : 'none',
+                color: '#78716c', cursor: 'pointer', borderRadius: '6px',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
+              onMouseLeave={(e) => e.currentTarget.style.background = value === '' ? '#fff7ed' : 'none'}
+            >
+              {title}
+            </button>
+            {options.map((o) => (
+              <button
+                key={o}
+                onClick={() => { onChange(o); setOpen(false); }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '6px 10px', border: 'none', background: value === o ? '#fff7ed' : 'none',
+                  color: '#292524', cursor: 'pointer', borderRadius: '6px',
+                  fontFamily: title === 'Font' ? cssFontName(o) : undefined,
+                  fontSize: title === 'Size' ? Number(o) + 'px' : '13px',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
+                onMouseLeave={(e) => e.currentTarget.style.background = value === o ? '#fff7ed' : 'none'}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface ToolbarProps {
   editor: Editor | null;
 }
@@ -144,117 +259,6 @@ export function Toolbar({ editor }: ToolbarProps) {
       <Icon size={16} />
     </button>
   );
-
-  interface DropdownProps {
-    value: string;
-    onChange: (value: string) => void;
-    options: string[];
-    title: string;
-  }
-
-  const DropdownPicker = ({ value, onChange, options, title }: DropdownProps) => {
-    const [open, setOpen] = useState(false);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const popoverRef = useRef<HTMLDivElement>(null);
-    const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ display: 'none' });
-
-    useEffect(() => {
-      const handler = (e: MouseEvent) => {
-        if (popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
-            triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
-          setOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handler);
-      return () => document.removeEventListener('mousedown', handler);
-    }, []);
-
-    const openPopover = () => {
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        let left = rect.left;
-        const popoverWidth = 170;
-        if (left + popoverWidth > window.innerWidth - 8) {
-          left = window.innerWidth - popoverWidth - 8;
-        }
-        setPopoverStyle({
-          position: 'fixed',
-          top: rect.bottom + 4,
-          left,
-          zIndex: 30,
-          background: 'white',
-          border: '1.5px solid #e7e5e4',
-          borderRadius: '12px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-          padding: '4px',
-          maxHeight: '280px',
-          overflowY: 'auto',
-          minWidth: popoverWidth + 'px',
-        });
-      }
-      setOpen(true);
-    };
-
-    return (
-      <div style={{ display: 'inline-flex', position: 'static' }}>
-        <button
-          ref={triggerRef}
-          onClick={() => open ? setOpen(false) : openPopover()}
-          onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
-          style={{
-            padding: '6px 7px', border: 'none', background: open ? '#fff7ed' : 'transparent',
-            color: '#78716c', borderRadius: '8px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '3px', fontSize: '13px', flexShrink: 0,
-            outline: 'none', maxWidth: '100px',
-          }}
-          onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = '#f5f5f4'; }}
-          onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
-          title={title}
-        >
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {value || title}
-          </span>
-          <ChevronDown size={12} style={{ flexShrink: 0 }} />
-        </button>
-        {open && (
-          <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 20 }} onClick={() => setOpen(false)} />
-            <div ref={popoverRef} style={popoverStyle}>
-              <button
-                onClick={() => { onChange(''); setOpen(false); }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left', fontSize: '13px',
-                  padding: '6px 10px', border: 'none', background: value === '' ? '#fff7ed' : 'none',
-                  color: '#78716c', cursor: 'pointer', borderRadius: '6px',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
-                onMouseLeave={(e) => e.currentTarget.style.background = value === '' ? '#fff7ed' : 'none'}
-              >
-                {title}
-              </button>
-              {options.map((o) => (
-                <button
-                  key={o}
-                  onClick={() => { onChange(o); setOpen(false); }}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    padding: '6px 10px', border: 'none', background: value === o ? '#fff7ed' : 'none',
-                    color: '#292524', cursor: 'pointer', borderRadius: '6px',
-                    fontFamily: title === 'Font' ? o : undefined,
-                    fontSize: title === 'Size' ? Number(o) + 'px' : '13px',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = value === o ? '#fff7ed' : 'none'}
-                >
-                  {o}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
 
   const Divider = () => <div style={{ width: '1px', height: '20px', background: '#e7e5e4', margin: '0 3px', flexShrink: 0 }} />;
 
