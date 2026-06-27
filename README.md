@@ -1,14 +1,16 @@
 <div>
 <img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" alt="Next.js">
 <img src="https://img.shields.io/badge/TipTap-Editor-orange" alt="TipTap">
+<img src="https://img.shields.io/badge/Yjs-CRDT-blue" alt="Yjs">
+<img src="https://img.shields.io/badge/Socket.IO-Realtime-lightgrey" alt="Socket.IO">
 <img src="https://img.shields.io/badge/Prisma-ORM-blue" alt="Prisma">
 <img src="https://img.shields.io/badge/PostgreSQL-Database-green" alt="PostgreSQL">
 <img src="https://img.shields.io/badge/license-MIT-purple" alt="License">
 </div>
 
-<h1>📝 CollabDocs</h1>
+<h1>CollabDocs</h1>
 <p><strong>Real-Time Collaborative Document Editor</strong></p>
-<p>Create, edit, and collaborate on documents with your team.</p>
+<p>Create, edit, and collaborate on documents with your team in real time.</p>
 
 ## ✨ Live Demo
 
@@ -38,7 +40,7 @@
 - Navigate between results
 - Replace individual or all occurrences
 
-### 🤖 AI Assistant
+### 🤖 AI Assistant (powered by Groq)
 - **Improve Writing:** Enhance vocabulary and flow
 - **Fix Grammar:** Correct common grammar mistakes
 - **Summarize:** Condense long text
@@ -51,11 +53,19 @@
   - Expiry date/time
 - Manage and revoke access
 
-### 💬 Comments
-- Add comments to documents
-- Reply to comments
+### Real-Time Coediting
+- **CRDT-based** via Yjs — no merge conflicts, no operational transformation
+- Yjs WebSocket server persists document state to both **LevelDB** (fast) and **PostgreSQL** (durable)
+- See collaborators' **cursors** and **selections** in real time
+- **Presence indicators** — who's viewing or editing right now
+
+### 💬 Comments & Notifications
+- Add comments to documents with optional position anchors
+- Reply to comments (threaded)
 - Resolve/unresolve threads
 - Delete your own comments
+- Get notified when someone comments on your document
+- @mention collaborators in comments
 
 ### 📋 Templates
 Start with pre-made templates:
@@ -116,12 +126,19 @@ Download documents in multiple formats:
 |----------|------------|
 | **Framework** | [Next.js 14](https://nextjs.org/) |
 | **Editor** | [TipTap](https://tiptap.dev/) |
+| **Real-Time CRDT** | [Yjs](https://yjs.dev/) + [y-websocket](https://github.com/yjs/y-websocket) |
+| **Presence & Cursors** | [Socket.IO](https://socket.io/) |
 | **Database** | PostgreSQL (via [Supabase](https://supabase.com/)) |
 | **ORM** | [Prisma](https://www.prisma.io/) |
-| **Authentication** | [NextAuth.js](https://next-auth.js.org/) |
-| **Styling** | Tailwind CSS + Inline Styles |
+| **Authentication** | [NextAuth.js](https://next-auth.js.org/) (Credentials + Google OAuth) |
+| **AI** | [Groq](https://groq.com/) (OpenAI-compatible API) |
+| **State Management** | [Zustand](https://github.com/pmndrs/zustand) + [Immer](https://immerjs.github.io/immer/) |
+| **Styling** | Tailwind CSS + [class-variance-authority](https://cva-docs.vercel.app/) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
-| **Deployment** | [Vercel](https://vercel.com/) |
+| **Export** | [jsPDF](https://github.com/parallax/jsPDF), [docx](https://docx.js.org/), [Turndown](https://github.com/mixmark-io/turndown) |
+| **Testing** | [Vitest](https://vitest.dev/) |
+| **Deployment** | Docker / Vercel |
+| **Containers** | [Docker](https://www.docker.com/) + [docker-compose](https://docs.docker.com/compose/) |
 
 ## 📦 Project Structure
 
@@ -129,32 +146,71 @@ Download documents in multiple formats:
 realtime-collab-platform/
 ├── prisma/                         # Database schema & migrations
 │   ├── schema.prisma               # Prisma schema
-│   └── seed.ts                     # Seed data
-├── public/                         # Static assets
+│   ├── seed.ts                     # Seed data
+│   └── migrations/                 # Migration files
+├── public/                         # Static assets (icons, templates, avatars)
+├── server/                         # Standalone servers (Yjs WebSocket, start script)
+│   ├── yjs-server.js               # Yjs CRDT WebSocket server
+│   └── start.js                    # Production orchestrator (Next.js + Yjs + Socket.IO)
 ├── src/
 │   ├── app/                        # Next.js App Router pages
 │   │   ├── api/                    # API routes
 │   │   ├── auth/                   # Auth pages (signin, register)
+│   │   ├── contact/                # Contact page
 │   │   ├── dashboard/              # Dashboard page
+│   │   ├── docs/                   # Documentation
 │   │   ├── documents/              # Document editor page
+│   │   ├── features/               # Features page
+│   │   ├── privacy/                # Privacy policy
+│   │   ├── settings/               # User settings
+│   │   ├── shared/                 # Shared with me
+│   │   ├── status/                 # System status
+│   │   ├── templates/              # Template gallery
+│   │   ├── terms/                  # Terms of service
 │   │   └── trash/                  # Trash page
 │   ├── components/
-│   │   ├── ai/                     # AI Assistant panel
-│   │   ├── comments/               # Comment thread
+│   │   ├── ai/                     # AI Assistant panel (Groq)
+│   │   ├── collaboration/          # Presence indicators
+│   │   ├── comments/               # Comment threads
+│   │   ├── dashboard/              # Dashboard components
+│   │   ├── documents/              # Document list/card components
 │   │   ├── editor/                 # TipTap editor & toolbar
 │   │   ├── export/                 # Export dialog
+│   │   ├── landing/                # Landing page components
 │   │   ├── notifications/          # Notification center
 │   │   ├── search/                 # Find & Replace panel
 │   │   ├── share/                  # Share dialog
 │   │   ├── templates/              # Template gallery
 │   │   └── ui/                     # Reusable UI components
 │   ├── hooks/                      # Custom React hooks
+│   │   ├── useCollaboration.ts     # Socket.IO collaboration hook
+│   │   └── useYjsCollaboration.ts  # Yjs CRDT hook
 │   ├── lib/                        # Utility functions
-│   ├── store/                      # Zustand state management
+│   │   ├── auth.ts                 # NextAuth configuration
+│   │   ├── documentAccess.ts       # Access control helpers
+│   │   ├── exportService.ts        # Export to PDF/DOCX/MD/HTML/TXT
+│   │   ├── password.ts             # Password hashing & verification
+│   │   ├── prisma.ts               # Prisma client singleton
+│   │   ├── rateLimit.ts            # Rate limiter
+│   │   └── toast.tsx               # Toast notification component
+│   ├── server/                     # Socket.IO server (compiled separately)
+│   │   ├── index.ts                # Entry point
+│   │   └── socketServer.ts         # Socket.IO setup (presence, cursors, comments)
+│   ├── store/                      # Zustand + Immer state management
+│   │   └── documentStore.ts        # Document, presence, comment state
 │   └── types/                      # TypeScript type definitions
+│       ├── index.ts                # Shared types
+│       └── next-auth.d.ts          # NextAuth type augmentations
+├── .dockerignore
 ├── .env.example                    # Environment variables template
-├── next.config.js                  # Next.js configuration
+├── .gitignore
+├── docker-compose.yml              # Full-stack Docker setup
+├── Dockerfile                      # Multi-stage production build
+├── next.config.mjs                 # Next.js configuration
 ├── tailwind.config.ts              # Tailwind CSS configuration
+├── vitest.config.ts                # Vitest test configuration
+├── eslint.config.mjs               # ESLint flat config
+├── postcss.config.js               # PostCSS configuration
 └── package.json                    # Dependencies and scripts
 ```
 
@@ -197,10 +253,20 @@ npx prisma generate
 npx prisma db seed
 ```
 
-### 5. Start the development server
+### 5. Start the development servers
+
+The app requires three services: Next.js, Yjs WebSocket, and Socket.IO.
 
 ```
-npm run dev
+npm run dev:all
+```
+
+Or start them individually:
+
+```
+npm run dev           # Next.js on http://localhost:3000
+npm run yjs-server    # Yjs on ws://localhost:1234
+npm run socket-server # Socket.IO on http://localhost:3001
 ```
 
 Open:
@@ -208,6 +274,34 @@ Open:
 ```
 http://localhost:3000
 ```
+
+### Testing
+
+```
+npm test              # run vitest
+npm run test:watch    # watch mode
+```
+
+### Database management
+
+```
+npm run db:migrate    # run Prisma migrations
+npm run db:studio     # open Prisma Studio
+npm run db:generate   # regenerate Prisma client
+```
+
+## 🐳 Docker Deployment
+
+```
+docker compose up -d --build
+```
+
+This starts:
+- **PostgreSQL** on port `5432`
+- **Redis** on port `6379`
+- **Next.js app** on port `3000`
+- **Yjs WebSocket** on port `1234`
+- **Socket.IO** on port `3001`
 
 ## 🌐 Deployment
 
@@ -231,7 +325,9 @@ prisma generate && next build
 
 5. Deploy 🎉
 
-## 🗄️ Database Setup (Supabase)
+## 🗄️ Database Setup
+
+### Supabase (recommended for Vercel)
 
 1. Create a project on Supabase
 2. Copy the Session Pooler connection string
@@ -242,6 +338,14 @@ prisma generate && next build
 npx prisma db push
 ```
 
+### Local (via Docker)
+
+```
+docker compose up -d postgres redis
+```
+
+The `docker-compose.yml` includes PostgreSQL and Redis for local development.
+
 ## 🔧 Environment Variables
 
 | Variable | Required | Description |
@@ -249,7 +353,15 @@ npx prisma db push
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `NEXTAUTH_URL` | Yes | Your application URL |
 | `NEXTAUTH_SECRET` | Yes | Random secret for JWT encryption |
-| `NEXT_PUBLIC_YJS_URL` | No | Yjs WebSocket server URL (optional) |
+| `AI_API_KEY` | Yes | Groq API key (or any OpenAI-compatible API key) |
+| `AI_BASE_URL` | Yes | `https://api.groq.com/openai/v1` |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
+| `NEXT_PUBLIC_YJS_URL` | No | Yjs WebSocket server URL (`ws://localhost:1234`) |
+| `NEXT_PUBLIC_SOCKET_URL` | No | Socket.IO server URL (`http://localhost:3001`) |
+| `CORS_ORIGIN` | No | Allowed CORS origin (defaults to NEXTAUTH_URL) |
+| `SOCKET_PORT` | No | Socket.IO server port (default `3001`) |
+| `YJS_PORT` | No | Yjs server port (default `1234`) |
 
 ## 📄 License
 
