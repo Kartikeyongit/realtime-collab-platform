@@ -189,8 +189,8 @@ export default function DashboardPage() {
 
       <div className="card" style={{ padding: '12px 16px', marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: folders.length ? 10 : 0 }}>
-          <input className="input" placeholder="New folder…" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createFolder()} style={{ maxWidth: 200, flex: '1 1 140px' }} />
-          <button className="btn btn-secondary btn-sm" onClick={createFolder}>+ Folder</button>
+          <input className="input dash-filter" placeholder="New folder…" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createFolder()} style={{ maxWidth: 200, flex: '1 1 140px' }} />
+          <button className="btn btn-secondary btn-sm dash-filter" onClick={createFolder}>+ Folder</button>
           <span style={{ fontSize: 12, color: '#a8a29e' }}>{folders.length} folders · {tags.length} tags</span>
         </div>
         {folders.length > 0 && (
