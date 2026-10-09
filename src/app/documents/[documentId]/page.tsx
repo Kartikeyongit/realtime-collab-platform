@@ -287,7 +287,7 @@ export default function DocumentPage() {
       {showHistory && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8vh' }} onClick={() => setShowHistory(false)}>
           <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 'min(560px, 94vw)', maxHeight: '80vh', overflow: 'auto' }}>
-            <VersionHistory documentId={documentId} onRestored={() => { fetchDocument(); setShowHistory(false); }} />
+            <VersionHistory documentId={documentId} editor={editorInstance} onRestored={() => { fetchDocument(); }} />
             <div style={{ padding: 12, textAlign: 'right' }}><button className="btn btn-secondary btn-sm" onClick={() => setShowHistory(false)}>Close</button></div>
           </div>
         </div>

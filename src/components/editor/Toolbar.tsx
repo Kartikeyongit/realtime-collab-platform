@@ -145,10 +145,15 @@ interface ToolbarProps {
 
 export function Toolbar({ editor }: ToolbarProps) {
   const [focusMode, setFocusMode] = useState(false);
-  const [showMore, setShowMore] = useState(false);
+  const [showMore, setShowMore] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [fontFamily, setFontFamily] = useState('');
   const [fontSize, setFontSize] = useState('');
+
+  // Desktop shows full toolbar, mobile collapses secondary tools into More.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) setShowMore(false);
+  }, []);
 
   useEffect(() => {
     if (!editor) return;
@@ -254,11 +259,10 @@ export function Toolbar({ editor }: ToolbarProps) {
   );
 
   return (
-    <div className="toolbar-scroll" style={{
+    <div className="toolbar-scroll toolbar-desktop" style={{
       background: 'white', borderBottom: '1.5px solid #e7e5e4',
       padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '1px',
-      overflowX: 'auto', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
-      scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch',
+      flexWrap: 'wrap', rowGap: 4, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
     }}>
       {/* Primary formatting — always visible, min 40px touch targets on mobile via CSS */}
       <ToolButton icon={Bold} action={() => editor.chain().focus().toggleBold().run()} active={() => editor.isActive('bold')} title="Bold (Ctrl+B)" />

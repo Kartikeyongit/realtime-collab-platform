@@ -66,6 +66,7 @@ export async function PUT(
 
   const data: any = {};
   if (content !== undefined) data.content = content;
+  if (typeof body.title === 'string' && body.title.trim()) data.title = body.title.trim().slice(0, 200);
   if (typeof body.isFavorite === 'boolean') data.isFavorite = body.isFavorite;
   if (typeof body.isPinned === 'boolean') data.isPinned = body.isPinned;
   if (body.folderId === null) data.folderId = null;
