@@ -7,6 +7,7 @@ import axios from 'axios';
 import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X } from 'lucide-react';
 import { showSuccess, showError } from '@/lib/toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
+import { FilterSelect } from '@/components/ui/FilterSelect';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface DocTag { tag: { id: string; name: string } }
@@ -163,20 +164,38 @@ export default function DashboardPage() {
 
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input className="input dash-filter" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220, flex: '1 1 160px' }} />
-        <select className="input dash-filter" value={folderFilter} onChange={(e) => { setFolderFilter(e.target.value); setPage(1); }} style={{ maxWidth: 170 }}>
-          <option value="">All folders</option>
-          <option value="none">No folder</option>
-          {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-        </select>
-        <select className="input dash-filter" value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setPage(1); }} style={{ maxWidth: 150 }}>
-          <option value="">All tags</option>
-          {tags.map((t) => <option key={t.id} value={t.name}>#{t.name}</option>)}
-        </select>
-        <select className="input dash-filter" value={sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 140 }}>
-          <option value="updated">Recent</option>
-          <option value="title">Title A–Z</option>
-          <option value="created">Newest</option>
-        </select>
+        <FilterSelect
+          ariaLabel="Filter by folder"
+          maxWidth={190}
+          value={folderFilter}
+          onChange={(v) => { setFolderFilter(v); setPage(1); }}
+          options={[
+            { value: '', label: 'All folders' },
+            { value: 'none', label: 'No folder' },
+            ...folders.map((f) => ({ value: f.id, label: f.name })),
+          ]}
+        />
+        <FilterSelect
+          ariaLabel="Filter by tag"
+          maxWidth={170}
+          value={tagFilter}
+          onChange={(v) => { setTagFilter(v); setPage(1); }}
+          options={[
+            { value: '', label: 'All tags' },
+            ...tags.map((t) => ({ value: t.name, label: `#${t.name}` })),
+          ]}
+        />
+        <FilterSelect
+          ariaLabel="Sort documents"
+          maxWidth={150}
+          value={sort}
+          onChange={(v) => setSort(v)}
+          options={[
+            { value: 'updated', label: 'Recent' },
+            { value: 'title', label: 'Title A–Z' },
+            { value: 'created', label: 'Newest' },
+          ]}
+        />
         <button className={`btn btn-sm dash-filter ${favOnly ? '' : 'btn-secondary'}`} onClick={() => { setFavOnly(!favOnly); setPage(1); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 14px' }}>
           <Star size={15} fill={favOnly ? 'currentColor' : 'none'} /> Favorites
         </button>
