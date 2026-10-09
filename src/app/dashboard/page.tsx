@@ -1,36 +1,46 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { formatDistanceToNow } from 'date-fns';
-import { Search, Clock, Users, Trash2, FileText } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ui/Dialog';
 import { showSuccess, showError } from '@/lib/toast';
-import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { CommandPalette } from '@/components/ui/CommandPalette';
 
-interface Document {
+interface DocTag { tag: { id: string; name: string } }
+interface DocItem {
   id: string;
   title: string;
   updatedAt: string;
+  folder?: { id: string; name: string } | null;
+  tags?: DocTag[];
+  isFavorite?: boolean;
+  isPinned?: boolean;
   owner: { name: string };
   collaborators: Array<{ user: { name: string } }>;
 }
+interface Folder { id: string; name: string; _count?: { documents: number } }
+interface Tag { id: string; name: string; _count?: { documents: number } }
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocItem[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [refetching, setRefetching] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const searchTimer = useRef<NodeJS.Timeout | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
+  const [folderFilter, setFolderFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [favOnly, setFavOnly] = useState(false);
+  const [sort, setSort] = useState('updated');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [newFolder, setNewFolder] = useState('');
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const limit = 20;
 
   useEffect(() => {
@@ -43,95 +53,132 @@ export default function DashboardPage() {
   }, [search]);
 
   useEffect(() => {
-    if (session) fetchDocuments(page, debouncedSearch);
-  }, [session, page, debouncedSearch]);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
-  const fetchDocuments = useCallback(async (pageNum: number, searchTerm: string) => {
+  const fetchMeta = useCallback(async () => {
     try {
-      if (initialLoading) setInitialLoading(true);
-      else setRefetching(true);
-      const params = new URLSearchParams({ page: String(pageNum), limit: String(limit) });
-      if (searchTerm) params.set('search', searchTerm);
+      const [f, t] = await Promise.all([axios.get('/api/folders'), axios.get('/api/tags')]);
+      setFolders(f.data.folders || []);
+      setTags(t.data.tags || []);
+    } catch {}
+  }, []);
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: String(limit), sort });
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (folderFilter) params.set('folderId', folderFilter);
+      if (tagFilter) params.set('tag', tagFilter);
+      if (favOnly) params.set('favorite', '1');
       const { data } = await axios.get(`/api/documents?${params}`);
       setDocuments(data.documents);
       setTotalPages(data.totalPages);
       setTotal(data.total);
     } catch { showError('Failed to load documents'); }
-    finally { setInitialLoading(false); setRefetching(false); }
-  }, [initialLoading]);
+    finally { setInitialLoading(false); }
+  }, [page, debouncedSearch, folderFilter, tagFilter, favOnly, sort]);
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
+  useEffect(() => { if (session) { fetchMeta(); } }, [session, fetchMeta]);
+  useEffect(() => { if (session) fetchDocuments(); }, [session, fetchDocuments]);
+
+  const createFolder = async () => {
+    const name = newFolder.trim();
+    if (!name) return;
     try {
-      await axios.delete(`/api/documents/${deleteTarget.id}`);
-      setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));
-      setTotal(prev => prev - 1);
-      showSuccess('Deleted');
-    } catch { showError('Failed to delete'); }
-    setDeleteTarget(null);
+      const { data } = await axios.post('/api/folders', { name });
+      setFolders((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewFolder('');
+      showSuccess('Folder created');
+    } catch { showError('Failed to create folder'); }
   };
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const toggleFav = async (doc: DocItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await axios.put(`/api/documents/${doc.id}`, { isFavorite: !doc.isFavorite, skipVersion: true });
+      setDocuments((p) => p.map((d) => (d.id === doc.id ? { ...d, isFavorite: !d.isFavorite } : d)));
+    } catch { showError('Failed to update'); }
   };
 
-  if (initialLoading) return <DashboardSkeleton />;
+  const togglePin = async (doc: DocItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await axios.put(`/api/documents/${doc.id}`, { isPinned: !doc.isPinned, skipVersion: true });
+      setDocuments((p) => p.map((d) => (d.id === doc.id ? { ...d, isPinned: !d.isPinned } : d)));
+    } catch { showError('Failed to update'); }
+  };
+
+  const moveDoc = async (docId: string, folderId: string) => {
+    try {
+      await axios.put(`/api/documents/${docId}`, { folderId: folderId || null, skipVersion: true });
+      fetchDocuments();
+      showSuccess('Moved');
+    } catch { showError('Failed to move'); }
+  };
+
+  if (initialLoading) return <div style={{ maxWidth: 1000, margin: '0 auto', padding: 36 }}>Loading…</div>;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '36px 24px' }}>
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>Documents</h1>
-        <p style={{ color: '#78716c', fontSize: '14px' }}>
-          {debouncedSearch
-            ? `${total} result${total !== 1 ? 's' : ''} for "${debouncedSearch}"`
-            : totalPages > 1
-              ? `Page ${page} of ${totalPages}`
-              : `${total} document${total !== 1 ? 's' : ''}`
-          }
-        </p>
+    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginRight: 'auto' }}>Documents {total > 0 && <span style={{ fontSize: 13, color: '#a8a29e', fontWeight: 400 }}>({total})</span>}</h1>
+        <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
 
-      <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '340px' }} className="dashboard-search">
-        <Search size={15} color="#a8a29e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-        <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" style={{ paddingLeft: '36px', paddingRight: '36px' }} />
-        {refetching && (
-          <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px' }}>
-            <div className="search-spinner" />
-          </div>
-        )}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <input className="input" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220 }} />
+        <select className="input" value={folderFilter} onChange={(e) => { setFolderFilter(e.target.value); setPage(1); }} style={{ maxWidth: 170 }}>
+          <option value="">All folders</option>
+          <option value="none">No folder</option>
+          {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+        </select>
+        <select className="input" value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setPage(1); }} style={{ maxWidth: 150 }}>
+          <option value="">All tags</option>
+          {tags.map((t) => <option key={t.id} value={t.name}>#{t.name}</option>)}
+        </select>
+        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 130 }}>
+          <option value="updated">Recent</option>
+          <option value="title">Title A–Z</option>
+          <option value="created">Newest</option>
+        </select>
+        <button className={`btn btn-sm ${favOnly ? '' : 'btn-secondary'}`} onClick={() => { setFavOnly(!favOnly); setPage(1); }}>★ Favorites</button>
       </div>
-      <style>{`.search-spinner { width: 14px; height: 14px; border: 2px solid #e7e5e4; border-top-color: #f97316; border-radius: 50%; animation: searchSpin 0.6s linear infinite; } @keyframes searchSpin { to { transform: rotate(360deg); } }`}</style>
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="New folder…" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createFolder()} style={{ maxWidth: 200 }} />
+        <button className="btn btn-secondary btn-sm" onClick={createFolder}>+ Folder</button>
+        <span style={{ fontSize: 12, color: '#a8a29e' }}>{folders.length} folders · {tags.length} tags — free, stored in Neon</span>
+      </div>
 
       {documents.length === 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', marginTop: '20px' }}>
-          <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: '#fafaf9', border: '1.5px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-            <FileText size={32} color="#d6d3d1" />
-          </div>
-          <p style={{ fontSize: '16px', fontWeight: 600, color: '#57534e', marginBottom: '6px' }}>No documents yet</p>
-          <p style={{ fontSize: '14px', color: '#a8a29e', margin: 0 }}>{search ? 'Try another search' : 'Click + New in the navbar to create your first document'}</p>
-        </div>
+        <p style={{ color: '#a8a29e', padding: '40px 0', textAlign: 'center' }}>No documents. Create one with + New.</p>
       ) : (
-        <div style={{ display: 'grid', gap: '8px' }}>
+        <div style={{ display: 'grid', gap: 8 }}>
           {documents.map((doc) => (
-            <div key={doc.id} onClick={() => router.push(`/documents/${doc.id}`)} className="card" style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px' }}>{doc.title}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#a8a29e' }}>
-                  <Clock size={11} />
-                  <span>{formatDistanceToNow(new Date(doc.updatedAt), { addSuffix: true })}</span>
-                  {doc.collaborators.length > 0 && <><span>·</span><Users size={11} /><span>{doc.collaborators.length}</span></>}
+            <div key={doc.id} onClick={() => router.push(`/documents/${doc.id}`)} className="card" style={{ padding: '12px 16px', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 14 }}>{doc.isPinned ? '📌' : '📄'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</div>
+                  <div style={{ fontSize: 11, color: '#a8a29e', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {doc.folder && <span>📁 {doc.folder.name}</span>}
+                    {(doc.tags || []).map((t) => <span key={t.tag.id}>#{t.tag.name}</span>)}
+                  </div>
                 </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                <span className="hide-mobile" style={{ display: 'flex', alignItems: 'center' }}>
-                  {doc.collaborators.slice(0, 2).map((c, i) => (
-                    <div key={i} className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', marginLeft: i > 0 ? '-8px' : 0, border: '2px solid white' }}>{c.user.name?.charAt(0) || '?'}</div>
-                  ))}
-                </span>
-                <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(doc); }} className="btn btn-ghost btn-sm" style={{ color: '#d6d3d1', padding: '4px' }}>
-                  <Trash2 size={13} />
-                </button>
+                <button onClick={(e) => togglePin(doc, e)} title="Pin" style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: doc.isPinned ? 1 : 0.4 }}>📌</button>
+                <button onClick={(e) => toggleFav(doc, e)} title="Favorite" style={{ border: 'none', background: 'none', cursor: 'pointer', color: doc.isFavorite ? '#f59e0b' : '#d6d3d1' }}>★</button>
+                <select value={doc.folder?.id || ''} onClick={(e) => e.stopPropagation()} onChange={(e) => moveDoc(doc.id, e.target.value)} style={{ fontSize: 12, maxWidth: 120 }}>
+                  <option value="">No folder</option>
+                  {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
               </div>
             </div>
           ))}
@@ -139,14 +186,14 @@ export default function DashboardPage() {
       )}
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
-          <button disabled={page <= 1} onClick={() => handlePageChange(page - 1)} className="btn btn-secondary btn-sm">Previous</button>
-          <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#78716c', padding: '0 8px' }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)} className="btn btn-secondary btn-sm">Next</button>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
+          <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="btn btn-secondary btn-sm">Prev</button>
+          <span style={{ fontSize: 13, color: '#78716c' }}>{page}/{totalPages}</span>
+          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="btn btn-secondary btn-sm">Next</button>
         </div>
       )}
 
-      <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} title="Delete document?" description={`"${deleteTarget?.title}" will be permanently deleted.`} confirmText="Delete" variant="danger" />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} folders={folders} onNavigate={(id) => router.push(`/documents/${id}`)} />
     </div>
   );
 }

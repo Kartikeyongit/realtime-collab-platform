@@ -145,6 +145,7 @@ interface ToolbarProps {
 
 export function Toolbar({ editor }: ToolbarProps) {
   const [focusMode, setFocusMode] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [fontFamily, setFontFamily] = useState('');
   const [fontSize, setFontSize] = useState('');
@@ -182,6 +183,12 @@ export function Toolbar({ editor }: ToolbarProps) {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Neon-free guard: base64 images bloat Postgres — cap at 2MB client-side ($0).
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image too large (max 2MB to keep free DB small). Please compress first.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const url = reader.result as string;
@@ -247,45 +254,54 @@ export function Toolbar({ editor }: ToolbarProps) {
   );
 
   return (
-    <div style={{
+    <div className="toolbar-scroll" style={{
       background: 'white', borderBottom: '1.5px solid #e7e5e4',
       padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '1px',
-      overflowX: 'auto', flexShrink: 0,
-      scrollbarWidth: 'none', msOverflowStyle: 'none',
+      overflowX: 'auto', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
+      scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch',
     }}>
-      {/* Primary formatting — always visible */}
-      <ToolButton icon={Bold} action={() => editor.chain().focus().toggleBold().run()} active={() => editor.isActive('bold')} />
-      <ToolButton icon={Italic} action={() => editor.chain().focus().toggleItalic().run()} active={() => editor.isActive('italic')} />
-      <ToolButton icon={Underline} action={() => editor.chain().focus().toggleUnderline().run()} active={() => editor.isActive('underline')} />
-        <ToolButton icon={Strikethrough} action={() => editor.chain().focus().toggleStrike().run()} active={() => editor.isActive('strike')} />
-        <ToolButton icon={Code} action={() => editor.chain().focus().toggleCode().run()} active={() => editor.isActive('code')} />
-        <ToolButton icon={Highlighter} action={() => editor.chain().focus().toggleHighlight().run()} active={() => editor.isActive('highlight')} />
+      {/* Primary formatting — always visible, min 40px touch targets on mobile via CSS */}
+      <ToolButton icon={Bold} action={() => editor.chain().focus().toggleBold().run()} active={() => editor.isActive('bold')} title="Bold (Ctrl+B)" />
+      <ToolButton icon={Italic} action={() => editor.chain().focus().toggleItalic().run()} active={() => editor.isActive('italic')} title="Italic (Ctrl+I)" />
+      <ToolButton icon={Underline} action={() => editor.chain().focus().toggleUnderline().run()} active={() => editor.isActive('underline')} title="Underline (Ctrl+U)" />
+        <ToolButton icon={Strikethrough} action={() => editor.chain().focus().toggleStrike().run()} active={() => editor.isActive('strike')} title="Strikethrough" />
+        <ToolButton icon={Code} action={() => editor.chain().focus().toggleCode().run()} active={() => editor.isActive('code')} title="Inline code" />
+        <ToolButton icon={Highlighter} action={() => editor.chain().focus().toggleHighlight().run()} active={() => editor.isActive('highlight')} title="Highlight" />
       <Divider />
-      {/* H1-H3 always visible, H4-H6 hidden on mobile */}
-      <ToolButton icon={Heading1} action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={() => editor.isActive('heading', { level: 1 })} />
-      <ToolButton icon={Heading2} action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={() => editor.isActive('heading', { level: 2 })} />
-      <ToolButton icon={Heading3} action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={() => editor.isActive('heading', { level: 3 })} />
-        <ToolButton icon={Heading4} action={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={() => editor.isActive('heading', { level: 4 })} />
-        <ToolButton icon={Heading5} action={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={() => editor.isActive('heading', { level: 5 })} />
-        <ToolButton icon={Heading6} action={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={() => editor.isActive('heading', { level: 6 })} />
+      <ToolButton icon={Heading1} action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={() => editor.isActive('heading', { level: 1 })} title="H1" />
+      <ToolButton icon={Heading2} action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={() => editor.isActive('heading', { level: 2 })} title="H2" />
+      <ToolButton icon={Heading3} action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={() => editor.isActive('heading', { level: 3 })} title="H3" />
+      <span className="toolbar-more-inline">
+        <ToolButton icon={Heading4} action={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={() => editor.isActive('heading', { level: 4 })} title="H4" />
+        <ToolButton icon={Heading5} action={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={() => editor.isActive('heading', { level: 5 })} title="H5" />
+        <ToolButton icon={Heading6} action={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={() => editor.isActive('heading', { level: 6 })} title="H6" />
+      </span>
         <Divider />
-        <ToolButton icon={AlignLeft} action={() => editor.chain().focus().setTextAlign('left').run()} active={() => editor.isActive({ textAlign: 'left' })} />
-        <ToolButton icon={AlignCenter} action={() => editor.chain().focus().setTextAlign('center').run()} active={() => editor.isActive({ textAlign: 'center' })} />
-        <ToolButton icon={AlignRight} action={() => editor.chain().focus().setTextAlign('right').run()} active={() => editor.isActive({ textAlign: 'right' })} />
+        <ToolButton icon={AlignLeft} action={() => editor.chain().focus().setTextAlign('left').run()} active={() => editor.isActive({ textAlign: 'left' })} title="Align left" />
+        <ToolButton icon={AlignCenter} action={() => editor.chain().focus().setTextAlign('center').run()} active={() => editor.isActive({ textAlign: 'center' })} title="Align center" />
+        <ToolButton icon={AlignRight} action={() => editor.chain().focus().setTextAlign('right').run()} active={() => editor.isActive({ textAlign: 'right' })} title="Align right" />
       <Divider />
-      <ToolButton icon={List} action={() => editor.chain().focus().toggleBulletList().run()} active={() => editor.isActive('bulletList')} />
-      <ToolButton icon={ListOrdered} action={() => editor.chain().focus().toggleOrderedList().run()} active={() => editor.isActive('orderedList')} />
-      <ToolButton icon={CheckSquare} action={() => editor.chain().focus().toggleTaskList().run()} active={() => editor.isActive('taskList')} />
-      <ToolButton icon={Quote} action={() => editor.chain().focus().toggleBlockquote().run()} active={() => editor.isActive('blockquote')} />
+      <ToolButton icon={List} action={() => editor.chain().focus().toggleBulletList().run()} active={() => editor.isActive('bulletList')} title="Bullet list" />
+      <ToolButton icon={ListOrdered} action={() => editor.chain().focus().toggleOrderedList().run()} active={() => editor.isActive('orderedList')} title="Ordered list" />
+      <ToolButton icon={CheckSquare} action={() => editor.chain().focus().toggleTaskList().run()} active={() => editor.isActive('taskList')} title="Tasks" />
+      <ToolButton icon={Quote} action={() => editor.chain().focus().toggleBlockquote().run()} active={() => editor.isActive('blockquote')} title="Quote" />
       <Divider />
       {/* Insert group */}
       <ToolButton icon={Table} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={() => editor.isActive('table')} title="Table" />
-      <ToolButton icon={Image} action={() => imageInputRef.current?.click()} active={() => false} title="Insert image" />
+      <ToolButton icon={Image} action={() => imageInputRef.current?.click()} active={() => false} title="Insert image (max 2MB)" />
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-      <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
+      <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link (Ctrl+K in editor is palette)" />
         <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
-      {/* Secondary tools — hidden on mobile */}
+      <button
+        onClick={() => setShowMore(!showMore)}
+        style={{ padding: '6px 10px', border: 'none', background: showMore ? '#fff7ed' : 'transparent', color: '#78716c', borderRadius: 8, cursor: 'pointer', fontSize: 13, flexShrink: 0 }}
+        title="More formatting"
+      >
+        {showMore ? 'Less' : 'More ▾'}
+      </button>
+      {showMore && (
+        <>
         {tableGroup}
         <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
         <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
@@ -321,9 +337,11 @@ export function Toolbar({ editor }: ToolbarProps) {
         >
           <Focus size={16} />
         </button>
+        </>
+      )}
       <div style={{ flex: 1 }} />
-      <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo" />
-      <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo" />
+      <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo (Ctrl+Z)" />
+      <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo (Ctrl+Y)" />
     </div>
   );
 }

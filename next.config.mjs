@@ -24,6 +24,7 @@ const nextConfig = {
     'y-websocket',
     'y-protocols',
     'y-prosemirror',
+    'y-indexeddb',
   ],
 };
 

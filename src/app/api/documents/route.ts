@@ -30,13 +30,43 @@ export async function POST(request: Request) {
 
     const { prisma } = await import('@/lib/prisma');
 
+    // Optional folder assignment (must belong to requester, $0: no extra service)
+    let folderId: string | null = null;
+    if (body.folderId) {
+      const folder = await prisma.folder.findFirst({
+        where: { id: body.folderId, ownerId: session.user.id },
+        select: { id: true },
+      });
+      if (folder) folderId = folder.id;
+    }
+
     const document = await prisma.document.create({
       data: {
         title,
         ownerId: session.user.id,
         content,
+        folderId,
+        isFavorite: !!body.isFavorite,
+        isPinned: !!body.isPinned,
       },
     });
+
+    // Optional tags (create on demand, owner-scoped)
+    if (Array.isArray(body.tags) && body.tags.length > 0) {
+      const raw: string[] = (body.tags as unknown[]).map((t) => String(t).trim().slice(0, 30)).filter(Boolean);
+      const names: string[] = Array.from(new Set(raw)).slice(0, 10);
+      for (const name of names) {
+        const tag = await prisma.tag.upsert({
+          where: { ownerId_name: { ownerId: session.user.id as string, name: name as string } },
+          update: {},
+          create: { name: name as string, ownerId: session.user.id as string },
+        });
+        await prisma.documentTag.createMany({
+          data: [{ documentId: document.id, tagId: tag.id }],
+          skipDuplicates: true,
+        });
+      }
+    }
 
     return NextResponse.json(document, { status: 201 });
   } catch (error: any) {
@@ -56,6 +86,11 @@ export async function GET(request: Request) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')));
     const search = searchParams.get('search') || '';
+    const folderId = searchParams.get('folderId') || '';
+    const tag = searchParams.get('tag') || '';
+    const favorite = searchParams.get('favorite') === '1' || searchParams.get('favorite') === 'true';
+    const pinned = searchParams.get('pinned') === '1' || searchParams.get('pinned') === 'true';
+    const sort = searchParams.get('sort') || 'updated'; // updated | title | created
 
     const { prisma } = await import('@/lib/prisma');
 
@@ -70,6 +105,19 @@ export async function GET(request: Request) {
     if (search) {
       where.title = { contains: search, mode: 'insensitive' };
     }
+    if (folderId === 'none') {
+      where.folderId = null;
+    } else if (folderId) {
+      where.folderId = folderId;
+    }
+    if (favorite) where.isFavorite = true;
+    if (pinned) where.isPinned = true;
+    if (tag) {
+      where.tags = { some: { tag: { name: tag, ownerId: session.user.id } } };
+    }
+
+    const orderBy: any =
+      sort === 'title' ? { title: 'asc' } : sort === 'created' ? { createdAt: 'desc' } : [{ isPinned: 'desc' }, { updatedAt: 'desc' }];
 
     const [documents, total] = await Promise.all([
       prisma.document.findMany({
@@ -77,8 +125,10 @@ export async function GET(request: Request) {
         include: {
           owner: { select: { id: true, name: true, image: true } },
           collaborators: { include: { user: { select: { id: true, name: true, image: true } } } },
+          folder: { select: { id: true, name: true } },
+          tags: { include: { tag: { select: { id: true, name: true } } } },
         },
-        orderBy: { updatedAt: 'desc' },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),

@@ -41,6 +41,35 @@ export function useYjsCollaboration(documentId: string) {
 
   const yDoc = useMemo(() => new Y.Doc(), [documentId]);
 
+  // Offline-first: IndexedDB persistence ($0, survives Render sleep + airplane mode).
+  // Yjs WebSocket stays source for live co-edit; IndexedDB is local cache.
+  useEffect(() => {
+    let persistence: any = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { IndexeddbPersistence } = await import('y-indexeddb');
+        if (cancelled) return;
+        persistence = new IndexeddbPersistence(documentId, yDoc);
+        try {
+          await persistence.whenSynced;
+        } catch {}
+        if (cancelled) return;
+        // Local cache ready — if WS is down (Render sleep), still allow REST load.
+        if (tokenReady === 'unavailable') setSynced(true);
+      } catch {
+        // IndexedDB unavailable (private mode/quota) — fall back to WS/REST only.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      try {
+        persistence?.destroy?.();
+      } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId, yDoc, tokenReady]);
+
   const userInfo = useMemo(() => ({
     name: session?.user?.name || 'Anonymous',
     color: '#' + (session?.user?.id
@@ -119,6 +148,14 @@ export function useYjsCollaboration(documentId: string) {
       provider.destroy();
     };
   }, [provider]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        yDoc.destroy();
+      } catch {}
+    };
+  }, [yDoc]);
 
   const isEmpty = yDoc.getXmlFragment('default').length === 0;
 

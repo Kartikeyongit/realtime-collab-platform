@@ -23,6 +23,9 @@ model User {
   presence       Presence[]
   collaborations DocumentCollaborator[]
   notifications  Notification[]
+  folders        Folder[]
+  tags           Tag[]
+  versions       DocumentVersion[]
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 }
@@ -67,6 +70,69 @@ model Document {
   updatedAt     DateTime               @updatedAt
   ShareLink     ShareLink[]
   trashed       Boolean                @default(false)
+  folderId      String?
+  folder        Folder?                @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  isFavorite    Boolean                @default(false)
+  isPinned      Boolean                @default(false)
+  tags          DocumentTag[]
+  versions      DocumentVersion[]
+
+  @@index([ownerId, updatedAt])
+  @@index([folderId])
+  @@index([ownerId, isFavorite])
+  @@index([ownerId, isPinned])
+}
+
+model Folder {
+  id        String     @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Folder?    @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[]   @relation("FolderChildren")
+  documents Document[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([ownerId])
+  @@index([parentId])
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  documents DocumentTag[]
+  createdAt DateTime      @default(now())
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
+}
+
+model DocumentTag {
+  documentId String
+  tagId      String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([documentId, tagId])
+  @@index([tagId])
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  title      String
+  content    Json?
+  createdBy  String
+  creator    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([documentId, createdAt])
 }
 
 model DocumentCollaborator {

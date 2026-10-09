@@ -9,6 +9,8 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { Editor } from '@tiptap/react';
 import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
+import { VersionHistory } from '@/components/editor/VersionHistory';
+import { CommandPalette } from '@/components/ui/CommandPalette';
 import { CommentThread } from '@/components/comments/CommentThread';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SearchReplacePanel } from '@/components/search/SearchReplacePanel';
@@ -42,6 +44,9 @@ export default function DocumentPage() {
   const [showShare, setShowShare] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -59,9 +64,19 @@ export default function DocumentPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setShowSearch(prev => !prev); }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') { e.preventDefault(); setShowAI(prev => !prev); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setShowPalette(true); }
     };
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => { setIsOnline(false); setConnectionStatus('offline'); };
+    setIsOnline(typeof navigator === 'undefined' ? true : navigator.onLine);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
   }, []);
 
   const fetchDocument = async () => {
@@ -188,6 +203,8 @@ export default function DocumentPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
           <NotificationCenter />
           <div style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
+          <button onClick={() => setShowPalette(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Quick switch (Ctrl+K)">⌘K</button>
+          <button onClick={() => setShowHistory(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Version history"><Clock size={15} /></button>
           <button onClick={() => setShowAI(!showAI)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="AI Assistant"><Sparkles size={15} /></button>
           <button onClick={() => setShowSearch(!showSearch)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Find & Replace"><Search size={15} /></button>
           <button onClick={() => setShowExport(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Export"><Download size={15} /></button>
@@ -204,6 +221,7 @@ export default function DocumentPage() {
                   <button onClick={() => { setShowSearch(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Search size={15} /> Find & Replace</button>
                   <button onClick={() => { setShowAI(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Sparkles size={15} /> AI Assistant</button>
                   <button onClick={() => { setShowComments(true); setShowMenu(false); }} className="dropdown-item show-mobile"><MessageSquare size={15} /> Comments</button>
+                  <button onClick={() => { setShowHistory(true); setShowMenu(false); }} className="dropdown-item"><Clock size={15} /> History</button>
                   <div className="dropdown-divider show-mobile" />
                   <button onClick={() => { handleDuplicate(); setShowMenu(false); }} className="dropdown-item"><Copy size={15} /> Duplicate</button>
                   <div className="dropdown-divider" />
@@ -214,6 +232,11 @@ export default function DocumentPage() {
           </div>
         </div>
       </header>
+      {!isOnline && (
+        <div style={{ background: '#fef3c7', color: '#92400e', fontSize: 12, padding: '6px 12px', textAlign: 'center' }}>
+          Offline — edits are saved locally (IndexedDB + queue) and will sync when you reconnect.
+        </div>
+      )}
 
       {/* Editor Area */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -261,6 +284,15 @@ export default function DocumentPage() {
       <ExportDialog isOpen={showExport} onClose={() => setShowExport(false)} documentTitle={title} editor={editorInstance} addToast={addToast} />
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} documentId={documentId} documentTitle={title} collaborators={document?.collaborators || []} addToast={addToast} onCollaboratorChange={() => fetchDocument()} />
       <ConfirmDialog isOpen={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} onConfirm={handleDelete} title="Delete document?" description={`"${title}" will be permanently deleted.`} confirmText="Delete" variant="danger" />
+      {showHistory && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8vh' }} onClick={() => setShowHistory(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 'min(560px, 94vw)', maxHeight: '80vh', overflow: 'auto' }}>
+            <VersionHistory documentId={documentId} onRestored={() => { fetchDocument(); setShowHistory(false); }} />
+            <div style={{ padding: 12, textAlign: 'right' }}><button className="btn btn-secondary btn-sm" onClick={() => setShowHistory(false)}>Close</button></div>
+          </div>
+        </div>
+      )}
+      <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} onNavigate={(id) => router.push(`/documents/${id}`)} />
     </div>
   );
 }

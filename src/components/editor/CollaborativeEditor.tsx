@@ -41,6 +41,7 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     const { yDoc, provider, awareness, connected, synced, isEmpty, userInfo } = useYjsCollaboration(documentId);
 
     const isDirtyRef = useRef(false);
+    const offlineBannerRef = useRef(false);
 
     const saveDocument = useCallback(async () => {
       if (!editorRef.current) return;
@@ -51,11 +52,26 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         return;
       }
 
+      // Offline queue ($0): stash last content locally when save fails / offline.
+      const queueKey = `offline-queue-${documentIdRef.current}`;
       try {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          try {
+            localStorage.setItem(queueKey, JSON.stringify({ content, at: Date.now() }));
+          } catch {}
+          isDirtyRef.current = true;
+          return;
+        }
         await axios.put(`/api/documents/${documentIdRef.current}`, { content });
         isDirtyRef.current = false;
+        try {
+          localStorage.removeItem(queueKey);
+        } catch {}
       } catch (error) {
         console.error('Save failed:', error);
+        try {
+          localStorage.setItem(queueKey, JSON.stringify({ content, at: Date.now() }));
+        } catch {}
       }
     }, []);
 
@@ -76,7 +92,14 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
       const interval = setInterval(() => {
         if (isDirtyRef.current) saveDocument();
       }, 5000);
-      return () => clearInterval(interval);
+      const onOnline = () => {
+        if (isDirtyRef.current) saveDocument();
+      };
+      window.addEventListener('online', onOnline);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('online', onOnline);
+      };
     }, [saveDocument]);
 
     useEffect(() => {
