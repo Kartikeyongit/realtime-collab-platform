@@ -285,10 +285,10 @@ export default function DocumentPage() {
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} documentId={documentId} documentTitle={title} collaborators={document?.collaborators || []} addToast={addToast} onCollaboratorChange={() => fetchDocument()} />
       <ConfirmDialog isOpen={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} onConfirm={handleDelete} title="Delete document?" description={`"${title}" will be permanently deleted.`} confirmText="Delete" variant="danger" />
       {showHistory && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8vh' }} onClick={() => setShowHistory(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 'min(560px, 94vw)', maxHeight: '80vh', overflow: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setShowHistory(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '84vh', overflow: 'auto', padding: 0, animation: 'scaleIn 0.2s ease' }}>
             <VersionHistory documentId={documentId} editor={editorInstance} onRestored={() => { fetchDocument(); }} />
-            <div style={{ padding: 12, textAlign: 'right' }}><button className="btn btn-secondary btn-sm" onClick={() => setShowHistory(false)}>Close</button></div>
+            <div style={{ padding: '0 14px 14px', textAlign: 'right' }}><button className="btn btn-secondary btn-sm" onClick={() => setShowHistory(false)}>Close</button></div>
           </div>
         </div>
       )}

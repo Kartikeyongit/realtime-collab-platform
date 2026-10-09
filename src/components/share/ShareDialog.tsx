@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link, Mail, Copy, Check, Loader2, Clock, Lock, Globe, Trash2, Plus, UserX, ChevronDown } from 'lucide-react';
+import { X, Link, Mail, Copy, Check, Loader2, Clock, Lock, Globe, Trash2, Plus, UserX, ChevronDown, Share2 } from 'lucide-react';
 import axios from 'axios';
 
 interface ShareLink {
@@ -37,6 +37,13 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => { if (isOpen) fetchShareLinks(); }, [isOpen, documentId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   const fetchShareLinks = async () => {
     setLoadingLinks(true);
@@ -100,14 +107,17 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: 'white', borderRadius: '16px', border: '1.5px solid #e7e5e4', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: '480px', maxHeight: '80vh', overflow: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '20px 20px 0' }}>
-          <div>
-            <h2 style={{ fontWeight: 700, fontSize: '17px' }}>Share</h2>
-            <p style={{ fontSize: '13px', color: '#78716c' }}>{documentTitle}</p>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px', border: '1.5px solid #e7e5e4', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: 'min(480px, 100%)', maxHeight: '84vh', overflow: 'auto', animation: 'scaleIn 0.2s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 20px 14px', borderBottom: '1.5px solid #f5f5f4', background: '#fdfbf7', borderRadius: '20px 20px 0 0', position: 'sticky', top: 0, zIndex: 2 }}>
+          <span style={{ width: 36, height: 36, borderRadius: 12, background: '#fff7ed', border: '1.5px solid #fed7aa', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c', flexShrink: 0 }}>
+            <Share2 size={18} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{ fontWeight: 700, fontSize: '15px', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Share “{documentTitle}”</h2>
+            <p style={{ fontSize: '12px', color: '#a8a29e' }}>Invite people or create a link</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a8a29e', padding: '4px' }}><X size={18} /></button>
+          <button onClick={onClose} title="Close" style={{ background: '#fafaf9', border: '1.5px solid #e7e5e4', borderRadius: 999, cursor: 'pointer', color: '#78716c', width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={15} /></button>
         </div>
         <div style={{ padding: '20px' }}>
           <div style={{ marginBottom: '24px' }}>
@@ -146,7 +156,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
               <label style={{ fontSize: '12px', fontWeight: 600, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>People with access</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {collaborators.map((c) => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '10px', background: '#fafaf9' }}>
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '12px', background: '#fafaf9', border: '1.5px solid #f5f5f4' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c' }}>{c.user.name?.charAt(0) || '?'}</div>
                         <div><div style={{ fontSize: '13px', fontWeight: 500 }}>{c.user.name}</div><div style={{ fontSize: '11px', color: '#a8a29e' }}>{c.user.email}</div></div>
@@ -168,7 +178,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
               <button onClick={() => setShowCreateLink(!showCreateLink)} className="btn btn-ghost btn-sm" style={{ fontSize: '12px' }}><Plus size={13} /> New Link</button>
             </div>
             {showCreateLink && (
-              <div style={{ padding: '12px', background: '#fafaf9', borderRadius: '10px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ padding: '12px', background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '12px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1, position: 'relative' }}><Lock size={13} color="#a8a29e" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} /><input type="password" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="Password (optional)" className="input" style={{ paddingLeft: '32px', fontSize: '12px' }} /></div>
                   <div style={{ flex: 1, position: 'relative' }}><Clock size={13} color="#a8a29e" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} /><input type="datetime-local" value={linkExpiry} onChange={(e) => setLinkExpiry(e.target.value)} className="input" style={{ paddingLeft: '32px', fontSize: '12px' }} /></div>
@@ -186,7 +196,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {shareLinks.map((link) => (
-                  <div key={link.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '10px', background: '#fafaf9' }}>
+                  <div key={link.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '12px', background: '#fafaf9', border: '1.5px solid #f5f5f4' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                       {link.password ? <Lock size={13} color="#f97316" /> : <Globe size={13} color="#22c55e" />}
                       <span style={{ fontSize: '12px', color: '#78716c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>.../{link.token.substring(0, 8)}</span>

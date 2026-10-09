@@ -280,10 +280,19 @@ export default function DashboardPage() {
                 <button onClick={(e) => toggleFav(doc, e)} title={doc.isFavorite ? 'Unfavorite' : 'Favorite'} style={{ border: 'none', background: 'none', cursor: 'pointer', color: doc.isFavorite ? '#f59e0b' : '#d6d3d1', padding: 6 }}>
                   <Star size={20} fill={doc.isFavorite ? 'currentColor' : 'none'} />
                 </button>
-                <select value={doc.folder?.id || ''} onClick={(e) => e.stopPropagation()} onChange={(e) => moveDoc(doc.id, e.target.value)} className="input" style={{ fontSize: 12, maxWidth: 130, padding: '6px 8px' }}>
-                  <option value="">No folder</option>
-                  {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
+                <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+                  <FilterSelect
+                    ariaLabel="Move to folder"
+                    size="sm"
+                    maxWidth={130}
+                    value={doc.folder?.id || ''}
+                    onChange={(v) => moveDoc(doc.id, v)}
+                    options={[
+                      { value: '', label: 'No folder' },
+                      ...folders.map((f) => ({ value: f.id, label: f.name })),
+                    ]}
+                  />
+                </span>
               </div>
             </div>
           ))}

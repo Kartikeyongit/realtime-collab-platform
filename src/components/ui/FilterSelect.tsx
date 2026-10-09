@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 export interface FilterOption {
   value: string;
@@ -19,17 +19,21 @@ export function FilterSelect({
   onChange,
   maxWidth,
   ariaLabel,
+  size = 'md',
 }: {
   value: string;
   options: FilterOption[];
   onChange: (value: string) => void;
   maxWidth?: number;
   ariaLabel?: string;
+  size?: 'md' | 'sm';
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const rootRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value) ?? options[0];
+  const btnHeight = size === 'sm' ? 30 : 38;
+  const fontSize = size === 'sm' ? 12 : 14;
 
   useEffect(() => {
     if (!open) return;
@@ -63,14 +67,14 @@ export function FilterSelect({
         }}
         className="dash-filter"
         style={{
-          height: 38,
+          height: btnHeight,
           boxSizing: 'border-box',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
           width: '100%',
-          padding: '0 10px 0 12px',
-          fontSize: 14,
+          padding: size === 'sm' ? '0 8px 0 10px' : '0 10px 0 12px',
+          fontSize,
           color: '#44403c',
           background: open ? '#fff7ed' : 'white',
           border: open ? '1.5px solid #f97316' : '1.5px solid #e7e5e4',
@@ -130,8 +134,8 @@ export function FilterSelect({
                   alignItems: 'center',
                   gap: 8,
                   width: '100%',
-                  padding: '9px 12px',
-                  fontSize: 14,
+                  padding: size === 'sm' ? '7px 10px' : '9px 12px',
+                  fontSize,
                   fontWeight: isSel ? 600 : 400,
                   color: isSel ? '#c2410c' : '#44403c',
                   background: isSel ? '#fff7ed' : isActive ? '#fafaf9' : 'white',
@@ -142,9 +146,6 @@ export function FilterSelect({
                   whiteSpace: 'nowrap',
                 }}
               >
-                <span style={{ width: 16, flexShrink: 0, display: 'inline-flex', justifyContent: 'center' }}>
-                  {isSel && <Check size={14} color="#ea580c" />}
-                </span>
                 {opt.label}
               </button>
             );
