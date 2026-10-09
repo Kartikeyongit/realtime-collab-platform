@@ -145,15 +145,9 @@ interface ToolbarProps {
 
 export function Toolbar({ editor }: ToolbarProps) {
   const [focusMode, setFocusMode] = useState(false);
-  const [showMore, setShowMore] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [fontFamily, setFontFamily] = useState('');
   const [fontSize, setFontSize] = useState('');
-
-  // Desktop shows full toolbar, mobile collapses secondary tools into More.
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) setShowMore(false);
-  }, []);
 
   useEffect(() => {
     if (!editor) return;
@@ -259,12 +253,17 @@ export function Toolbar({ editor }: ToolbarProps) {
   );
 
   return (
-    <div className="toolbar-scroll toolbar-desktop" style={{
+    <div className="toolbar-scroll toolbar-strip" style={{
       background: 'white', borderBottom: '1.5px solid #e7e5e4',
-      padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '1px',
-      flexWrap: 'wrap', rowGap: 4, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
+      display: 'flex', alignItems: 'stretch', flexShrink: 0,
+      position: 'sticky', top: 0, zIndex: 10,
     }}>
-      {/* Primary formatting — always visible, min 40px touch targets on mobile via CSS */}
+      {/* Scrollable tools — single strip on all screens, safe for mobile (overflowX auto) */}
+      <div className="toolbar-scroll-inner" style={{
+        flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '1px',
+        padding: '6px 12px', overflowX: 'auto',
+        scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch',
+      }}>
       <ToolButton icon={Bold} action={() => editor.chain().focus().toggleBold().run()} active={() => editor.isActive('bold')} title="Bold (Ctrl+B)" />
       <ToolButton icon={Italic} action={() => editor.chain().focus().toggleItalic().run()} active={() => editor.isActive('italic')} title="Italic (Ctrl+I)" />
       <ToolButton icon={Underline} action={() => editor.chain().focus().toggleUnderline().run()} active={() => editor.isActive('underline')} title="Underline (Ctrl+U)" />
@@ -275,11 +274,9 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Heading1} action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={() => editor.isActive('heading', { level: 1 })} title="H1" />
       <ToolButton icon={Heading2} action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={() => editor.isActive('heading', { level: 2 })} title="H2" />
       <ToolButton icon={Heading3} action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={() => editor.isActive('heading', { level: 3 })} title="H3" />
-      <span className="toolbar-more-inline">
         <ToolButton icon={Heading4} action={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={() => editor.isActive('heading', { level: 4 })} title="H4" />
         <ToolButton icon={Heading5} action={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={() => editor.isActive('heading', { level: 5 })} title="H5" />
         <ToolButton icon={Heading6} action={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={() => editor.isActive('heading', { level: 6 })} title="H6" />
-      </span>
         <Divider />
         <ToolButton icon={AlignLeft} action={() => editor.chain().focus().setTextAlign('left').run()} active={() => editor.isActive({ textAlign: 'left' })} title="Align left" />
         <ToolButton icon={AlignCenter} action={() => editor.chain().focus().setTextAlign('center').run()} active={() => editor.isActive({ textAlign: 'center' })} title="Align center" />
@@ -294,18 +291,9 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Table} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={() => editor.isActive('table')} title="Table" />
       <ToolButton icon={Image} action={() => imageInputRef.current?.click()} active={() => false} title="Insert image (max 2MB)" />
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-      <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link (Ctrl+K in editor is palette)" />
+      <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
         <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
-      <button
-        onClick={() => setShowMore(!showMore)}
-        style={{ padding: '6px 10px', border: 'none', background: showMore ? '#fff7ed' : 'transparent', color: '#78716c', borderRadius: 8, cursor: 'pointer', fontSize: 13, flexShrink: 0 }}
-        title="More formatting"
-      >
-        {showMore ? 'Less' : 'More ▾'}
-      </button>
-      {showMore && (
-        <>
         {tableGroup}
         <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
         <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
@@ -341,11 +329,12 @@ export function Toolbar({ editor }: ToolbarProps) {
         >
           <Focus size={16} />
         </button>
-        </>
-      )}
-      <div style={{ flex: 1 }} />
-      <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo (Ctrl+Z)" />
-      <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo (Ctrl+Y)" />
+      </div>
+      {/* Fixed undo/redo on right end — always visible, never scrolls away */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1px', flexShrink: 0, padding: '6px 12px 6px 8px', background: 'white', borderLeft: '1.5px solid #e7e5e4' }}>
+        <ToolButton icon={Undo} action={() => editor.commands.undo()} active={() => false} title="Undo (Ctrl+Z)" />
+        <ToolButton icon={Redo} action={() => editor.commands.redo()} active={() => false} title="Redo (Ctrl+Y)" />
+      </div>
     </div>
   );
 }

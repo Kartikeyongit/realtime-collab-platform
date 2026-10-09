@@ -159,29 +159,29 @@ export default function DashboardPage() {
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
 
-      {refetching && <div style={{ height: 3, borderRadius: 3, background: 'linear-gradient(90deg,#fed7aa,#f97316,#fed7aa)', backgroundSize: '200% 100%', animation: 'shimmer 1s infinite', marginBottom: 12 }} />}
+      {refetching && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
 
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="input" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220, flex: '1 1 160px' }} />
-        <select className="input" value={folderFilter} onChange={(e) => { setFolderFilter(e.target.value); setPage(1); }} style={{ maxWidth: 170 }}>
+        <input className="input dash-filter" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220, flex: '1 1 160px' }} />
+        <select className="input dash-filter" value={folderFilter} onChange={(e) => { setFolderFilter(e.target.value); setPage(1); }} style={{ maxWidth: 170 }}>
           <option value="">All folders</option>
           <option value="none">No folder</option>
           {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
-        <select className="input" value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setPage(1); }} style={{ maxWidth: 150 }}>
+        <select className="input dash-filter" value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setPage(1); }} style={{ maxWidth: 150 }}>
           <option value="">All tags</option>
           {tags.map((t) => <option key={t.id} value={t.name}>#{t.name}</option>)}
         </select>
-        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 140 }}>
+        <select className="input dash-filter" value={sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 140 }}>
           <option value="updated">Recent</option>
           <option value="title">Title A–Z</option>
           <option value="created">Newest</option>
         </select>
-        <button className={`btn btn-sm ${favOnly ? '' : 'btn-secondary'}`} onClick={() => { setFavOnly(!favOnly); setPage(1); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <button className={`btn btn-sm dash-filter ${favOnly ? '' : 'btn-secondary'}`} onClick={() => { setFavOnly(!favOnly); setPage(1); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 14px' }}>
           <Star size={15} fill={favOnly ? 'currentColor' : 'none'} /> Favorites
         </button>
         {(folderFilter || tagFilter || favOnly || debouncedSearch) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setFolderFilter(''); setTagFilter(''); setFavOnly(false); setSearch(''); setPage(1); }}>
+          <button className="btn btn-ghost btn-sm dash-filter" onClick={() => { setFolderFilter(''); setTagFilter(''); setFavOnly(false); setSearch(''); setPage(1); }} style={{ padding: '0 14px' }}>
             <X size={14} /> Clear
           </button>
         )}
