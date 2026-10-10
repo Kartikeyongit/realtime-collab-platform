@@ -117,7 +117,11 @@ export async function GET(request: Request) {
     }
 
     const orderBy: any =
-      sort === 'title' ? { title: 'asc' } : sort === 'created' ? { createdAt: 'desc' } : [{ isPinned: 'desc' }, { updatedAt: 'desc' }];
+      sort === 'title' ? { title: 'asc' }
+      : sort === 'title-desc' ? { title: 'desc' }
+      : sort === 'created' ? { createdAt: 'desc' }
+      : sort === 'oldest' ? { updatedAt: 'asc' }
+      : [{ isPinned: 'desc' }, { updatedAt: 'desc' }];
 
     const [documents, total] = await Promise.all([
       prisma.document.findMany({

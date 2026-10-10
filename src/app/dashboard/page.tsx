@@ -206,13 +206,15 @@ export default function DashboardPage() {
         />
         <FilterSelect
           ariaLabel="Sort documents"
-          maxWidth={150}
+          maxWidth={210}
           value={sort}
           onChange={(v) => setSort(v)}
           options={[
-            { value: 'updated', label: 'Recent' },
+            { value: 'updated', label: 'Recently updated' },
+            { value: 'created', label: 'Recently created' },
+            { value: 'oldest', label: 'Least recently updated' },
             { value: 'title', label: 'Title A–Z' },
-            { value: 'created', label: 'Newest' },
+            { value: 'title-desc', label: 'Title Z–A' },
           ]}
         />
         <button className={`btn btn-sm dash-filter ${favOnly ? '' : 'btn-secondary'}`} onClick={() => { setFavOnly(!favOnly); setPage(1); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 14px' }}>
