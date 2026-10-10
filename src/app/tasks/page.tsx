@@ -72,7 +72,9 @@ export default function TasksPage() {
 
       {total === 0 ? (
         <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
-          <CheckSquare size={32} color="#d6d3d1" style={{ marginBottom: 12 }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <CheckSquare size={32} color="#d6d3d1" />
+          </div>
           <p style={{ fontSize: 15, fontWeight: 600, color: '#57534e' }}>All clear — no open tasks</p>
           <p style={{ fontSize: 13, color: '#a8a29e' }}>Tick the checkbox button in any document toolbar to add one.</p>
         </div>

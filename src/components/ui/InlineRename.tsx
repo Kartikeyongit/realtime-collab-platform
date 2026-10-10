@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { Pencil } from 'lucide-react';
 import { showError } from '@/lib/toast';
 
 interface InlineRenameProps {
@@ -93,10 +94,11 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
         letterSpacing: '-0.02em',
         lineHeight: '1',
         cursor: 'pointer',
-        display: 'inline',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-        textOverflow: 'ellipsis',
         maxWidth: '400px',
         borderRadius: '3px',
         padding: '1px 3px',
@@ -108,7 +110,10 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       title="Click to rename"
     >
-      {title || 'Untitled'}
+      <Pencil size={13} color="#a8a29e" style={{ flexShrink: 0 }} />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {title || 'Untitled'}
+      </span>
     </span>
   );
 }

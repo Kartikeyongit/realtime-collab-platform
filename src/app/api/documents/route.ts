@@ -23,9 +23,11 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const title = body.title || 'Untitled Document';
+    // Empty paragraph (no preset text): the editor's Placeholder extension shows
+    // the italic "Start typing..." hint, which vanishes on first keystroke.
     const content = body.content || {
       type: 'doc',
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Start typing...' }] }]
+      content: [{ type: 'paragraph' }]
     };
 
     const { prisma } = await import('@/lib/prisma');
