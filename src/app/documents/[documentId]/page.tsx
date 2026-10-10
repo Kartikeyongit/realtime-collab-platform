@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { Editor } from '@tiptap/react';
 import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
+import { DocumentTags } from '@/components/documents/DocumentTags';
 import { VersionHistory } from '@/components/editor/VersionHistory';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { CommentThread } from '@/components/comments/CommentThread';
@@ -205,6 +206,11 @@ export default function DocumentPage() {
           <div style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
           <button onClick={() => setShowPalette(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Quick switch (Ctrl+K)">⌘K</button>
           <button onClick={() => setShowHistory(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Version history"><Clock size={15} /></button>
+          <DocumentTags
+            documentId={documentId}
+            tags={document?.tags || []}
+            onChanged={(tags) => { if (document) setDocument({ ...document, tags }); }}
+          />
           <button onClick={() => setShowAI(!showAI)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="AI Assistant"><Sparkles size={15} /></button>
           <button onClick={() => setShowSearch(!showSearch)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Find & Replace"><Search size={15} /></button>
           <button onClick={() => setShowExport(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Export"><Download size={15} /></button>

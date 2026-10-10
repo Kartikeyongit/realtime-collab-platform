@@ -16,6 +16,11 @@ export interface Document {
   createdAt: string;
   updatedAt: string;
   trashed?: boolean;
+  folderId?: string | null;
+  folder?: { id: string; name: string } | null;
+  isFavorite?: boolean;
+  isPinned?: boolean;
+  tags?: Array<{ tag: { id: string; name: string } }>;
 }
 
 export interface DocumentCollaborator {
