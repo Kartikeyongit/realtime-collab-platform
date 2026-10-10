@@ -848,7 +848,7 @@ select.dash-filter:focus {
 .dash-shimmer {
   background: linear-gradient(90deg, #fed7aa 25%, #f97316 50%, #fed7aa 75%) !important;
   background-size: 200% 100% !important;
-  animation: shimmerSlow 1.4s ease-in-out infinite !important;
+  animation: shimmerSlow 1.2s linear infinite !important;
 }
 @media (max-width: 640px) {
   .toolbar-scroll-inner {
