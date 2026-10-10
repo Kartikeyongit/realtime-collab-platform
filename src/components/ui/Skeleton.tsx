@@ -12,13 +12,11 @@ interface SkeletonProps {
 export function Skeleton({ width = '100%', height = '16px', borderRadius = '8px', style }: SkeletonProps) {
   return (
     <div
+      className="skel"
       style={{
         width,
         height,
         borderRadius,
-        background: 'linear-gradient(90deg, #f5f5f4 25%, #e7e5e4 50%, #f5f5f4 75%)',
-        backgroundSize: '200% 100%',
-        animation: 'shimmer 1.5s infinite',
         ...style,
       }}
     />
