@@ -255,7 +255,7 @@ export default function DashboardPage() {
           </div>
         )}
         {tags.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: folders.length ? 10 : 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18, paddingTop: 14, borderTop: '1.5px solid #f5f5f4' }}>
             {tags.slice(0, 12).map((t) => {
               const active = tagFilter === t.name;
               return (
