@@ -82,7 +82,7 @@ export function VersionHistory({ documentId, editor, onRestored }: { documentId:
         {loading ? (
           <div style={{ display: 'grid', gap: 8 }}>
             {[1, 2, 3].map((i) => (
-              <div key={i} style={{ height: 56, borderRadius: 12, background: 'linear-gradient(90deg,#fafaf9 25%,#f5f5f4 50%,#fafaf9 75%)', backgroundSize: '200% 100%', animation: 'shimmerSlow 2.8s ease-in-out infinite' }} />
+              <div key={i} style={{ height: 56, borderRadius: 12, background: 'linear-gradient(90deg,#fafaf9 25%,#f5f5f4 50%,#fafaf9 75%)', backgroundSize: '200% 100%', animation: 'shimmerSlow 1.4s ease-in-out infinite' }} />
             ))}
           </div>
         ) : versions.length === 0 ? (
