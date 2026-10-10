@@ -110,10 +110,10 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       title="Click to rename"
     >
-      <Pencil size={13} color="#a8a29e" style={{ flexShrink: 0 }} />
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {title || 'Untitled'}
       </span>
+      <Pencil size={13} color="#a8a29e" style={{ flexShrink: 0 }} />
     </span>
   );
 }
