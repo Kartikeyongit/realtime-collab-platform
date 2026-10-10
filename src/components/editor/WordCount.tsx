@@ -23,8 +23,14 @@ export function WordCount({ editor }: WordCountProps) {
     editor.on('update', updateCounts);
     updateCounts();
 
+    // Content can land asynchronously via Yjs (template setContent, session-load
+    // editor recreation, IndexedDB restore) without emitting `update` after this
+    // listener attaches — recompute once settled so counts never stick at 0.
+    const settleTimer = setTimeout(updateCounts, 600);
+
     return () => {
       editor.off('update', updateCounts);
+      clearTimeout(settleTimer);
     };
   }, [editor]);
 

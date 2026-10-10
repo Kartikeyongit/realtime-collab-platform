@@ -70,13 +70,17 @@ export function useYjsCollaboration(documentId: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, yDoc, tokenReady]);
 
+  const sessionUserId = session?.user?.id;
+  const sessionUserName = session?.user?.name;
+  // Memoized on primitives (not the session object) so session refetches with
+  // identical content don't change identity — each change recreates the editor.
   const userInfo = useMemo(() => ({
-    name: session?.user?.name || 'Anonymous',
-    color: '#' + (session?.user?.id
-      ? parseInt(session.user.id.slice(0, 6), 16).toString(16).padStart(6, '0').slice(0, 6)
+    name: sessionUserName || 'Anonymous',
+    color: '#' + (sessionUserId
+      ? parseInt(sessionUserId.slice(0, 6), 16).toString(16).padStart(6, '0').slice(0, 6)
       : 'f97316'),
-    id: session?.user?.id || 'anonymous',
-  }), [session]);
+    id: sessionUserId || 'anonymous',
+  }), [sessionUserId, sessionUserName]);
 
   const awareness = useMemo(() => new awarenessProtocol.Awareness(yDoc), [yDoc]);
 

@@ -38,6 +38,10 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     const documentIdRef = useRef(documentId);
     documentIdRef.current = documentId;
     const initialContentLoaded = useRef(false);
+    // Reset per document so navigating doc→doc without remount still loads content.
+    useEffect(() => {
+      initialContentLoaded.current = false;
+    }, [documentId]);
     const { yDoc, provider, awareness, connected, synced, isEmpty, userInfo } = useYjsCollaboration(documentId);
 
     const isDirtyRef = useRef(false);
