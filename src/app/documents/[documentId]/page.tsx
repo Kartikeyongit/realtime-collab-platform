@@ -66,6 +66,12 @@ export default function DocumentPage() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setShowSearch(prev => !prev); }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') { e.preventDefault(); setShowAI(prev => !prev); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setShowPalette(true); }
+      if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        axios.post('/api/documents', { title: 'Quick note', tags: ['inbox'] })
+          .then(({ data }) => router.push(`/documents/${data.id}`))
+          .catch(() => showError('Failed to create note'));
+      }
     };
     const onOnline = () => setIsOnline(true);
     const onOffline = () => { setIsOnline(false); setConnectionStatus('offline'); };

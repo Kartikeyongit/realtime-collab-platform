@@ -5,9 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X } from 'lucide-react';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showWarning } from '@/lib/toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { FilterSelect } from '@/components/ui/FilterSelect';
+import { WeekStrip } from '@/components/documents/WeekStrip';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface DocTag { tag: { id: string; name: string } }
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [newFolder, setNewFolder] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
+  const quickNoteRef = useRef<() => void>(() => {});
   const firstLoad = useRef(true);
   const limit = 20;
 
@@ -64,6 +66,10 @@ export default function DashboardPage() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen(true);
+      }
+      if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        quickNoteRef.current();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -111,6 +117,31 @@ export default function DashboardPage() {
 
   useEffect(() => { if (status === 'authenticated') fetchMeta(); }, [status, fetchMeta]);
   useEffect(() => { if (status === 'authenticated') fetchDocuments(); }, [status, fetchDocuments]);
+  // Overdue nudge, once per tab session ($0: no email/cron — in-app + browser only)
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (sessionStorage.getItem('overdue-nudged')) return;
+    axios
+      .get('/api/tasks')
+      .then(({ data }) => {
+        const overdue = data.buckets?.overdue || [];
+        if (overdue.length === 0) return;
+        sessionStorage.setItem('overdue-nudged', '1');
+        showWarning(
+          overdue.length === 1
+            ? `1 overdue task: “${overdue[0].text.slice(0, 60)}”`
+            : `${overdue.length} overdue tasks — see Tasks page`
+        );
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('CollabDocs: tasks overdue', {
+              body: overdue.length === 1 ? overdue[0].text : `${overdue.length} tasks need attention`,
+            });
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [status]);
   // Refetch when returning to dashboard (back from document) so list is fresh but skeleton shows on first paint
   useEffect(() => {
     const onFocus = () => { if (status === 'authenticated' && !firstLoad.current) fetchDocuments(); };
@@ -168,6 +199,21 @@ export default function DashboardPage() {
     } catch { showError('Failed to move'); }
   };
 
+  const openToday = async () => {
+    try {
+      const { data } = await axios.get('/api/documents/daily');
+      router.push(`/documents/${data.document.id}`);
+    } catch { showError("Couldn't open today's note"); }
+  };
+
+  const quickNote = async () => {
+    try {
+      const { data } = await axios.post('/api/documents', { title: 'Quick note', tags: ['inbox'] });
+      router.push(`/documents/${data.id}`);
+    } catch { showError('Failed to create note'); }
+  };
+  quickNoteRef.current = quickNote;
+
   if (status === 'loading' || initialLoading) return <DashboardSkeleton />;
 
   return (
@@ -176,7 +222,14 @@ export default function DashboardPage() {
         <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', marginRight: 'auto' }}>
           Documents {total > 0 && <span style={{ fontSize: 13, color: '#a8a29e', fontWeight: 400 }}>({total})</span>}
         </h1>
+        <button className="btn btn-secondary btn-sm dash-filter" onClick={openToday} title="Open today's journal">Today</button>
+        <button className="btn btn-secondary btn-sm dash-filter" onClick={quickNote} title="Capture a quick note (Alt+N)">+ Quick note</button>
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
+      </div>
+
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>This week</div>
+        <WeekStrip />
       </div>
 
       {barVisible && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}

@@ -3,16 +3,31 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { showError } from '@/lib/toast';
-import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate } from 'lucide-react';
+import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare } from 'lucide-react';
 
 export function Navigation() {
   const { data: session } = useSession();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [openingToday, setOpeningToday] = useState(false);
+  const [openTasks, setOpenTasks] = useState(0);
+
+  useEffect(() => {
+    if (!session) return;
+    axios
+      .get('/api/tasks')
+      .then(({ data }) => {
+        const b = data.buckets || {};
+        setOpenTasks(
+          (b.overdue?.length || 0) + (b.today?.length || 0) + (b.upcoming?.length || 0) + (b.nodate?.length || 0)
+        );
+      })
+      .catch(() => {});
+  }, [session]);
 
   const handleNewDocument = async () => {
     setCreating(true);
@@ -23,6 +38,19 @@ export function Navigation() {
       showError('Failed to create document');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleToday = async () => {
+    if (openingToday) return;
+    setOpeningToday(true);
+    try {
+      const { data } = await axios.get('/api/documents/daily');
+      router.push(`/documents/${data.document.id}`);
+    } catch {
+      showError("Couldn't open today's note");
+    } finally {
+      setOpeningToday(false);
     }
   };
 
@@ -60,6 +88,19 @@ export function Navigation() {
                   <LayoutTemplate size={15} />
                   Templates
                 </Link>
+                <button onClick={handleToday} disabled={openingToday} title="Open today's journal" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
+                  {openingToday ? <Loader2 size={15} className="animate-spin" /> : <CalendarDays size={15} />}
+                  Today
+                </button>
+                <Link href="/tasks" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckSquare size={15} />
+                  Tasks
+                  {openTasks > 0 && (
+                    <span style={{ minWidth: 18, height: 18, borderRadius: 999, background: '#f97316', color: 'white', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>
+                      {openTasks > 99 ? '99+' : openTasks}
+                    </span>
+                  )}
+                </Link>
               </span>
             </>
           )}
@@ -90,6 +131,17 @@ export function Navigation() {
                       </button>
                       <button onClick={() => { setMenuOpen(false); router.push('/templates'); }} className="dropdown-item">
                         <LayoutTemplate size={15} /> Templates
+                      </button>
+                      <button onClick={() => { setMenuOpen(false); handleToday(); }} className="dropdown-item">
+                        <CalendarDays size={15} /> Today
+                      </button>
+                      <button onClick={() => { setMenuOpen(false); router.push('/tasks'); }} className="dropdown-item">
+                        <CheckSquare size={15} /> Tasks
+                        {openTasks > 0 && (
+                          <span style={{ marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 999, background: '#f97316', color: 'white', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>
+                            {openTasks > 99 ? '99+' : openTasks}
+                          </span>
+                        )}
                       </button>
                       <div className="dropdown-divider" />
                       <button onClick={() => { setMenuOpen(false); router.push('/trash'); }} className="dropdown-item">

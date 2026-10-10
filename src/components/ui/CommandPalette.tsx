@@ -47,6 +47,14 @@ export function CommandPalette({ open, onClose, onNavigate }: Props) {
         const { data } = await axios.post('/api/documents', { title: 'Untitled Document' });
         (onNavigate || router.push)(`/documents/${data.id}`);
       }},
+      { label: 'Quick note', run: async () => {
+        const { data } = await axios.post('/api/documents', { title: 'Quick note', tags: ['inbox'] });
+        (onNavigate || router.push)(`/documents/${data.id}`);
+      }},
+      { label: "Open today's journal", run: async () => {
+        const { data } = await axios.get('/api/documents/daily');
+        (onNavigate || router.push)(`/documents/${data.document.id}`);
+      }},
       { label: 'Go to dashboard', run: () => router.push('/dashboard') },
       { label: 'Go to trash', run: () => router.push('/trash') },
     ];

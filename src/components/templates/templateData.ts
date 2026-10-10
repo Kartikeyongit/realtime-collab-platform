@@ -4,6 +4,7 @@ import {
   BookOpen, BookMarked, GraduationCap,
   PenTool, Megaphone, Feather,
   User, ScrollText, Scale,
+  NotebookPen, Flame, Wallet, Plane,
 } from 'lucide-react';
 
 export interface Template {
@@ -853,6 +854,142 @@ export const templates: Template[] = [
       { type: 'paragraph', content: [{ type: 'text', text: 'Signature                                              Signature' }] },
       { type: 'paragraph', content: [{ type: 'text', text: '_________________________               _________________________' }] },
       { type: 'paragraph', content: [{ type: 'text', text: 'Date                                                       Date' }] },
+    ]},
+  },
+  {
+    id: 'daily-journal', name: 'Daily Journal', icon: NotebookPen,
+    description: 'Morning pages, priorities, and evening reflection for one day',
+    category: 'Personal',
+    content: { type: 'doc', content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Daily Journal' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: '[Today\'s date]' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Morning — Top 3 priorities' }] },
+      { type: 'taskList', content: [1, 2, 3].map(() => ({
+        type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph' }],
+      })) },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Notes' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Evening reflection' }] },
+      { type: 'bulletList', content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Win of the day: ' }, { type: 'text', text: '[...]' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Lesson learned: ' }, { type: 'text', text: '[...]' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Grateful for: ' }, { type: 'text', text: '[...]' }] }] },
+      ]},
+    ]},
+  },
+  {
+    id: 'habit-tracker', name: 'Habit Tracker', icon: Flame,
+    description: 'Weekly grid to track habits — check a box each day you show up',
+    category: 'Personal',
+    content: { type: 'doc', content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Habit Tracker — [Week of ...]' }] },
+      { type: 'table', content: [
+        { type: 'tableRow', content: ['Habit', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((h) => ({
+          type: 'tableHeader', attrs: { colspan: 1, rowspan: 1, colwidth: null },
+          content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: h }] }],
+        })) },
+        ...['[Read 20 min]', '[Exercise]', '[No sugar]'].map((habit) => ({
+          type: 'tableRow', content: [habit, '', '', '', '', '', '', ''].map((cell, i) => ({
+            type: 'tableCell', attrs: { colspan: 1, rowspan: 1, colwidth: null },
+            content: [{ type: 'paragraph', content: i === 0 ? [{ type: 'text', text: cell }] : [] }],
+          })),
+        })),
+      ]},
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Weekly review' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Perfect days: [x/7] · What helped: [...] · Next week I will: [...]' }] },
+    ]},
+  },
+  {
+    id: 'monthly-budget', name: 'Monthly Budget', icon: Wallet,
+    description: 'Income, fixed costs, and variable spending for one month',
+    category: 'Personal',
+    content: { type: 'doc', content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Budget — [Month YYYY]' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Income' }] },
+      { type: 'table', content: [
+        { type: 'tableRow', content: ['Source', 'Expected', 'Actual'].map((h) => ({
+          type: 'tableHeader', attrs: { colspan: 1, rowspan: 1, colwidth: null },
+          content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: h }] }],
+        })) },
+        ...['[Salary]', '[Side income]'].map((src) => ({
+          type: 'tableRow', content: [src, '[0]', '[0]'].map((cell, i) => ({
+            type: 'tableCell', attrs: { colspan: 1, rowspan: 1, colwidth: null },
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: cell }] }],
+          })),
+        })),
+      ]},
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Expenses' }] },
+      { type: 'taskList', content: ['[Rent — $0]', '[Groceries — $0]', '[Transport — $0]', '[Savings — $0]'].map((e) => ({
+        type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: e }] }],
+      })) },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Summary' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Total in: [0] · Total out: [0] · Saved: [0]' }] },
+    ]},
+  },
+  {
+    id: 'travel-plan', name: 'Travel Plan', icon: Plane,
+    description: 'Itinerary, bookings, packing list, and budget for a trip',
+    category: 'Personal',
+    content: { type: 'doc', content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Trip to [Destination] — [Dates]' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Bookings' }] },
+      { type: 'bulletList', content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Flights: ' }, { type: 'text', text: '[confirmation #, times]' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Stay: ' }, { type: 'text', text: '[hotel/address, check-in]' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Transport: ' }, { type: 'text', text: '[rental/trains]' }] }] },
+      ]},
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Day-by-day' }] },
+      { type: 'orderedList', content: [1, 2, 3].map((d) => ({
+        type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: `Day ${d}: ` }, { type: 'text', text: '[plan]' }] }],
+      })) },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Packing list' }] },
+      { type: 'taskList', content: ['[Passport/ID]', '[Chargers]', '[Meds]', '[Clothes]', '[Snacks]'].map((p) => ({
+        type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: p }] }],
+      })) },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Budget' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Target: [$0] · Spent: [$0]' }] },
+    ]},
+  },
+  {
+    id: 'study-notes', name: 'Study Notes', icon: GraduationCap,
+    description: 'Structured notes with key terms, summary, and self-test questions',
+    category: 'Academic',
+    content: { type: 'doc', content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: '[Subject] — [Topic]' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Key terms' }] },
+      { type: 'bulletList', content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: '[Term]: ' }, { type: 'text', text: '[definition in your own words]' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: '[Term]: ' }, { type: 'text', text: '[definition]' }] }] },
+      ]},
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Summary' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: '[Explain the topic as if teaching a friend — 3-5 sentences.]' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Self-test' }] },
+      { type: 'taskList', content: ['[Question 1 — can I answer without notes?]', '[Question 2]', '[Question 3]'].map((q) => ({
+        type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: q }] }],
+      })) },
+    ]},
+  },
+  {
+    id: 'reading-list', name: 'Reading List', icon: BookMarked,
+    description: 'Books and articles to read, reading now, and finished with ratings',
+    category: 'Personal',
+    content: { type: 'doc', content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Reading List' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'To read' }] },
+      { type: 'taskList', content: ['[Book title — Author]', '[Article title — link]'].map((b) => ({
+        type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: b }] }],
+      })) },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Finished' }] },
+      { type: 'table', content: [
+        { type: 'tableRow', content: ['Title', 'Rating', 'One-line takeaway'].map((h) => ({
+          type: 'tableHeader', attrs: { colspan: 1, rowspan: 1, colwidth: null },
+          content: [{ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: h }] }],
+        })) },
+        { type: 'tableRow', content: ['[Title]', '[★☆☆☆☆]', '[...]'].map((cell) => ({
+          type: 'tableCell', attrs: { colspan: 1, rowspan: 1, colwidth: null },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: cell }] }],
+        })) },
+      ]},
     ]},
   },
 ];
