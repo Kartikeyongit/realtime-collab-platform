@@ -662,11 +662,16 @@ html {
     padding: 16px !important;
   }
 
-  /* Notification panel responsive */
+  /* Notification panel: viewport-fixed sheet on mobile so it can never
+     clip off-screen from its mid-header anchor */
   .notification-dropdown {
-    width: calc(100vw - 32px) !important;
-    max-width: 340px !important;
-    right: -8px !important;
+    position: fixed !important;
+    top: 60px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
 
   /* Comment panel full-width on mobile */
