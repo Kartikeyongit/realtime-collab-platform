@@ -82,7 +82,7 @@ export function DocumentTags({
   const remove = (name: string) => save(names.filter((n) => n !== name));
 
   return (
-    <div ref={rootRef} style={{ position: 'relative' }}>
+    <div ref={rootRef} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="btn btn-ghost btn-sm"
