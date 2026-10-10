@@ -7,6 +7,12 @@ interface WordCountProps {
   editor: Editor | null;
 }
 
+function countOf(text: string) {
+  const chars = text.length;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  return { words, chars };
+}
+
 export function WordCount({ editor }: WordCountProps) {
   const [counts, setCounts] = useState({ words: 0, chars: 0 });
 
@@ -14,23 +20,24 @@ export function WordCount({ editor }: WordCountProps) {
     if (!editor) return;
 
     const updateCounts = () => {
-      const text = editor.state.doc.textContent;
-      const chars = text.length;
-      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-      setCounts({ words, chars });
+      const { words, chars } = countOf(editor.state.doc.textContent);
+      // Bail out without re-render when nothing changed.
+      setCounts((prev) => (prev.words === words && prev.chars === chars ? prev : { words, chars }));
     };
 
     editor.on('update', updateCounts);
     updateCounts();
 
-    // Content can land asynchronously via Yjs (template setContent, session-load
-    // editor recreation, IndexedDB restore) without emitting `update` after this
-    // listener attaches — recompute once settled so counts never stick at 0.
-    const settleTimer = setTimeout(updateCounts, 600);
+    // Safety net: Yjs-driven content (template seeding, session-load editor
+    // recreation, slow/cold WebSocket sync, IndexedDB restore) can land without
+    // an `update` event ever reaching this listener. Recompute periodically so
+    // the count can never stick stale — cheap (one text read/sec) and silent
+    // when unchanged thanks to the bail-out above.
+    const pollTimer = setInterval(updateCounts, 1000);
 
     return () => {
       editor.off('update', updateCounts);
-      clearTimeout(settleTimer);
+      clearInterval(pollTimer);
     };
   }, [editor]);
 

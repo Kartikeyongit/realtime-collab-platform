@@ -178,10 +178,19 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
       if (!synced || !initialContent || !editorRef.current || initialContentLoaded.current) return;
       const fragment = yDoc.getXmlFragment('default');
       if (fragment.length === 0 || (fragment.length === 1 && fragment.get(0).length === 0)) {
+        try {
+          editorRef.current.commands.setContent(initialContent);
+          initialContentLoaded.current = true;
+        } catch (error) {
+          // Editor may have been recreated mid-effect (session load) — leave the
+          // flag unset so a later run retries instead of stranding a blank doc.
+          console.error('Initial content load failed, will retry:', error);
+        }
+      } else {
         initialContentLoaded.current = true;
-        editorRef.current.commands.setContent(initialContent);
       }
-    }, [synced, initialContent]);
+      // `connected` in deps retries seeding after reconnect/recreation races.
+    }, [synced, initialContent, connected, yDoc]);
 
     useEffect(() => {
       onConnectionChange?.(connected);
