@@ -33,6 +33,8 @@ export default function DashboardPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refetching, setRefetching] = useState(false);
+  const [barVisible, setBarVisible] = useState(false);
+  const barTimer = useRef<NodeJS.Timeout | null>(null);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [folderFilter, setFolderFilter] = useState('');
@@ -79,7 +81,14 @@ export default function DashboardPage() {
   const fetchDocuments = useCallback(async () => {
     try {
       if (firstLoad.current) setInitialLoading(true);
-      else setRefetching(true);
+      else {
+        setRefetching(true);
+        // Keep the shimmer bar mounted for at least one full sweep (~1.2s).
+        // The fetch itself finishes in ~200ms, so without this the bar flashes
+        // and the animation never gets far enough to be perceived as motion.
+        if (barTimer.current) clearTimeout(barTimer.current);
+        setBarVisible(true);
+      }
       const params = new URLSearchParams({ page: String(page), limit: String(limit), sort });
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (folderFilter) params.set('folderId', folderFilter);
@@ -90,7 +99,14 @@ export default function DashboardPage() {
       setTotalPages(data.totalPages);
       setTotal(data.total);
     } catch { showError('Failed to load documents'); }
-    finally { setInitialLoading(false); setRefetching(false); firstLoad.current = false; }
+    finally {
+      setInitialLoading(false);
+      setRefetching(false);
+      firstLoad.current = false;
+      // Let the bar finish its sweep instead of vanishing mid-flash
+      if (barTimer.current) clearTimeout(barTimer.current);
+      barTimer.current = setTimeout(() => setBarVisible(false), 1200);
+    }
   }, [page, debouncedSearch, folderFilter, tagFilter, favOnly, sort]);
 
   useEffect(() => { if (status === 'authenticated') fetchMeta(); }, [status, fetchMeta]);
@@ -99,7 +115,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const onFocus = () => { if (status === 'authenticated' && !firstLoad.current) fetchDocuments(); };
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      if (barTimer.current) clearTimeout(barTimer.current);
+    };
   }, [status, fetchDocuments]);
 
   const createFolder = async () => {
@@ -160,7 +179,7 @@ export default function DashboardPage() {
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
 
-      {refetching && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
+      {barVisible && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
 
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input className="input dash-filter" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220, flex: '1 1 160px' }} />
