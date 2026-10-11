@@ -7,6 +7,7 @@ import axios from 'axios';
 import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X } from 'lucide-react';
 import { showSuccess, showError, showWarning } from '@/lib/toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
+import { AskWorkspace } from '@/components/ai/AskWorkspace';
 import { FilterSelect } from '@/components/ui/FilterSelect';
 import { WeekStrip } from '@/components/documents/WeekStrip';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [total, setTotal] = useState(0);
   const [newFolder, setNewFolder] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const quickNoteRef = useRef<() => void>(() => {});
   const firstLoad = useRef(true);
@@ -224,6 +226,7 @@ export default function DashboardPage() {
         </h1>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={openToday} title="Open today's journal">Today</button>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={quickNote} title="Capture a quick note (Alt+N)">+ Quick note</button>
+        <button className="btn btn-sm dash-filter" onClick={() => setAskOpen(true)} title="Ask across all your notes">✨ Ask</button>
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
 
@@ -381,7 +384,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} folders={folders} onNavigate={(id) => router.push(`/documents/${id}`)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} folders={folders} onNavigate={(id) => router.push(`/documents/${id}`)} onAsk={() => setAskOpen(true)} />
+      <AskWorkspace open={askOpen} onClose={() => setAskOpen(false)} />
     </div>
   );
 }

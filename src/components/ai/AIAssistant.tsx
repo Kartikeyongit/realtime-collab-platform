@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
-import { Sparkles, X, Wand2, FileSearch, Loader2, Send, Pencil, MessageSquarePlus } from 'lucide-react';
+import { Sparkles, X, Wand2, FileSearch, Loader2, Send, Pencil, MessageSquarePlus, ListChecks } from 'lucide-react';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 
@@ -13,15 +13,21 @@ interface AIAssistantProps {
   addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-type AIMode = 'improve' | 'summarize' | 'grammar' | 'expand' | 'custom';
+type AIMode = 'improve' | 'summarize' | 'grammar' | 'expand' | 'custom' | 'actions';
 
 const modes: { id: AIMode; label: string; icon: any }[] = [
   { id: 'improve', label: 'Improve', icon: Wand2 },
   { id: 'grammar', label: 'Grammar', icon: FileSearch },
   { id: 'summarize', label: 'Summarize', icon: Sparkles },
   { id: 'expand', label: 'Expand', icon: Pencil },
+  { id: 'actions', label: 'Actions', icon: ListChecks },
   { id: 'custom', label: 'Custom', icon: MessageSquarePlus },
 ];
+
+const ACTIONS_PROMPT =
+  'Extract the concrete action items from the following text. ' +
+  'Return one per line, each starting with "- ". No numbering, no headers, no commentary. ' +
+  'If there are none, return exactly: No action items found.';
 
 const selKey = new PluginKey('ai-selection');
 
@@ -93,6 +99,10 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
   }, [isOpen, clearSelectionDecor]);
 
   const handleAction = async () => {
+    if (mode === 'actions') {
+      await handleActions();
+      return;
+    }
     const { from, to } = editor.state.selection;
     const text = editor.state.doc.textBetween(from, to);
     if (!text) { addToast('Select text first', 'warning'); return; }
@@ -172,6 +182,80 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
     }
   };
 
+  /** Extract action items → real checklist at the cursor (feeds Tasks inbox). */
+  const handleActions = async () => {
+    const { from, to } = editor.state.selection;
+    const selected = editor.state.doc.textBetween(from, to);
+    const text = (selected.trim() || editor.state.doc.textContent).slice(0, 6000).trim();
+    if (!text) {
+      addToast('Nothing to extract from', 'warning');
+      return;
+    }
+    setProcessing(true);
+    abortRef.current = new AbortController();
+    clearSelectionDecor();
+    try {
+      editor.chain().focus().deleteSelection().run();
+      const response = await fetch('/api/ai/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, action: 'custom', prompt: ACTIONS_PROMPT }),
+        signal: abortRef.current.signal,
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(err.error || 'AI request failed');
+      }
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response stream');
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let full = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) throw new Error(parsed.error);
+            full += parsed.content || '';
+          } catch (e: any) {
+            if (e.message !== 'Unexpected token') throw e;
+          }
+        }
+      }
+      const items = full
+        .split('\n')
+        .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
+        .filter((l) => l && !/^no action items found\.?$/i.test(l));
+      if (items.length === 0) {
+        addToast('No action items found', 'info');
+        return;
+      }
+      editor.chain().focus().insertContent({
+        type: 'taskList',
+        content: items.slice(0, 20).map((item) => ({
+          type: 'taskItem',
+          attrs: { checked: false },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: item }] }],
+        })),
+      }).run();
+      addToast(`Added ${Math.min(items.length, 20)} action items`, 'success');
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      addToast(err.message || 'AI processing failed', 'error');
+    } finally {
+      setProcessing(false);
+      abortRef.current = null;
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -185,7 +269,7 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
         <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>Select text and choose an action</p>
       </div>
       <div style={{ padding: '16px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '16px' }}>
           {modes.map((m) => (
             <button key={m.id} onClick={() => setMode(m.id)}
               style={{ padding: '8px 2px', border: '1.5px solid', borderColor: mode === m.id ? '#f97316' : '#e7e5e4', background: mode === m.id ? '#fff7ed' : 'white', color: mode === m.id ? '#f97316' : '#78716c', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, transition: 'all 0.15s ease' }}>

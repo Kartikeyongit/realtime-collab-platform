@@ -14,10 +14,13 @@ export function DocumentTags({
   documentId,
   tags,
   onChanged,
+  getText,
 }: {
   documentId: string;
   tags: Array<{ tag: { id: string; name: string } }>;
   onChanged: (tags: Array<{ tag: { id: string; name: string } }>) => void;
+  /** Optional live doc text for local tag suggestions (no AI call). */
+  getText?: () => string;
 }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -27,6 +30,37 @@ export function DocumentTags({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const names = tags.map((t) => t.tag.name);
+
+  // Local suggestions: rank your existing tags by occurrence in the doc text.
+  // Pure string matching — instant, offline, zero AI quota.
+  const suggested = (() => {
+    if (!open || !getText) return [];
+    let text = '';
+    try {
+      text = (getText() || '').toLowerCase();
+    } catch {
+      return [];
+    }
+    if (text.length < 20) return [];
+    return suggestions
+      .map((t) => {
+        const needle = t.name.toLowerCase();
+        if (needle.length < 2) return null;
+        let count = 0;
+        let idx = text.indexOf(needle);
+        while (idx !== -1 && count < 50) {
+          count++;
+          idx = text.indexOf(needle, idx + needle.length);
+        }
+        // Weight multi-word / longer tags higher (fewer false positives).
+        const score = count * (1 + needle.length / 12);
+        return count > 0 ? { tag: t, score } : null;
+      })
+      .filter((x): x is { tag: { id: string; name: string }; score: number } => !!x)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((x) => x.tag);
+  })();
 
   useEffect(() => {
     if (!open) return;
@@ -118,6 +152,18 @@ export function DocumentTags({
               </div>
             ) : (
               <div style={{ fontSize: 12, color: '#a8a29e', marginBottom: 10 }}>No tags yet — add one below.</div>
+            )}
+            {suggested.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Suggested for this doc</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {suggested.map((s) => (
+                    <button key={s.id} onClick={() => add(s.name)} disabled={saving} title={`Add ${s.name}`} style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: '#f5f3ff', border: '1.5px dashed #c4b5fd', borderRadius: 999, padding: '3px 10px', cursor: 'pointer' }}>
+                      ✨ {s.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             <input
               ref={inputRef}

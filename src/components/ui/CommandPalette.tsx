@@ -9,9 +9,10 @@ interface Props {
   onClose: () => void;
   folders?: Array<{ id: string; name: string }>;
   onNavigate?: (id: string) => void;
+  onAsk?: () => void;
 }
 
-export function CommandPalette({ open, onClose, onNavigate }: Props) {
+export function CommandPalette({ open, onClose, onNavigate, onAsk }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Array<{ id: string; title: string }>>([]);
   const [active, setActive] = useState(0);
@@ -55,12 +56,16 @@ export function CommandPalette({ open, onClose, onNavigate }: Props) {
         const { data } = await axios.get('/api/documents/daily');
         (onNavigate || router.push)(`/documents/${data.document.id}`);
       }},
+      { label: 'Ask my workspace', run: async () => {
+        if (onAsk) onAsk();
+        else router.push('/dashboard');
+      }},
       { label: 'Go to dashboard', run: () => router.push('/dashboard') },
       { label: 'Go to trash', run: () => router.push('/trash') },
     ];
     if (!q) return list;
     return list.filter((a) => a.label.toLowerCase().includes(q.toLowerCase()));
-  }, [q, router, onNavigate]);
+  }, [q, router, onNavigate, onAsk]);
 
   if (!open) return null;
 

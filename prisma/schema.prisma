@@ -78,6 +78,7 @@ model Document {
   isPinned      Boolean                @default(false)
   tags          DocumentTag[]
   versions      DocumentVersion[]
+  chunks        DocumentChunk[]
   notifications Notification[]
 
   @@index([ownerId, updatedAt])
@@ -136,6 +137,20 @@ model DocumentVersion {
   createdAt  DateTime @default(now())
 
   @@index([documentId, createdAt])
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex Int
+  text       String   @db.Text
+  // pgvector embedding (MiniLM 384-dim). Written/read via raw SQL only.
+  embedding  Unsupported("vector(384)")?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
 }
 
 model DocumentCollaborator {

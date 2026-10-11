@@ -24,6 +24,7 @@ import { EmojiSuggestion } from './extensions/EmojiSuggestion';
 import { ParagraphFocus } from './extensions/ParagraphFocus';
 import { Toolbar } from './Toolbar';
 import { useYjsCollaboration } from '@/hooks/useYjsCollaboration';
+import { maybeAutoIndex } from '@/lib/ai/autoIndex';
 import axios from 'axios';
 
 interface CollaborativeEditorProps {
@@ -73,6 +74,8 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         try {
           localStorage.removeItem(queueKey);
         } catch {}
+        // Best-effort memory refresh (no-op unless workspace indexed once).
+        void maybeAutoIndex(documentIdRef.current, content);
       } catch (error) {
         console.error('Save failed:', error);
         try {

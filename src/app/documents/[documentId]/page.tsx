@@ -12,6 +12,7 @@ import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
 import { DocumentTags } from '@/components/documents/DocumentTags';
 import { VersionHistory } from '@/components/editor/VersionHistory';
 import { CommandPalette } from '@/components/ui/CommandPalette';
+import { AskWorkspace } from '@/components/ai/AskWorkspace';
 import { CommentThread } from '@/components/comments/CommentThread';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SearchReplacePanel } from '@/components/search/SearchReplacePanel';
@@ -46,6 +47,7 @@ export default function DocumentPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [showAsk, setShowAsk] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   
@@ -215,6 +217,13 @@ export default function DocumentPage() {
             documentId={documentId}
             tags={document?.tags || []}
             onChanged={(tags) => { if (document) setDocument({ ...document, tags }); }}
+            getText={() => {
+              try {
+                return editorInstance?.state.doc.textContent ?? '';
+              } catch {
+                return '';
+              }
+            }}
           />
           <button onClick={() => setShowAI(!showAI)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="AI Assistant"><Sparkles size={15} /></button>
           <button onClick={() => setShowSearch(!showSearch)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Find & Replace"><Search size={15} /></button>
@@ -319,7 +328,8 @@ export default function DocumentPage() {
           </div>
         </div>
       )}
-      <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} onNavigate={(id) => router.push(`/documents/${id}`)} />
+      <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} onNavigate={(id) => router.push(`/documents/${id}`)} onAsk={() => setShowAsk(true)} />
+      <AskWorkspace open={showAsk} onClose={() => setShowAsk(false)} />
     </div>
   );
 }
