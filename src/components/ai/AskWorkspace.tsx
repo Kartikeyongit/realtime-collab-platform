@@ -28,15 +28,15 @@ interface IndexStatus {
 async function indexAllDocs(
   onProgress: (pct: number, stage: string) => void,
   signal: { cancelled: boolean }
-): Promise<{ docs: number; chunks: number }> {
+): Promise<{ docs: number; chunks: number; failed: string[] }> {
   // Page through the user's docs (bounded, personal scale).
-  const docs: Array<{ id: string; content: any }> = [];
+  const docs: Array<{ id: string; title: string; content: any }> = [];
   let page = 1;
   for (;;) {
     const { data } = await axios.get(`/api/documents?page=${page}&limit=50&sort=updated`);
     const list = data.documents || [];
     if (list.length === 0) break;
-    for (const d of list) docs.push({ id: d.id, content: (d as any).content });
+    for (const d of list) docs.push({ id: d.id, title: d.title || 'Untitled', content: (d as any).content });
     if (list.length < 50 || docs.length >= 200 || page >= 10) break;
     page++;
     if (signal.cancelled) throw new Error('cancelled');
@@ -44,49 +44,57 @@ async function indexAllDocs(
 
   let doneChunks = 0;
   let docCount = 0;
+  const failed: string[] = [];
   for (let i = 0; i < docs.length; i++) {
     if (signal.cancelled) throw new Error('cancelled');
-    const chunks = docToChunks(docs[i].content);
-    if (chunks.length === 0) continue;
-    const vecs = await embedTextsWithLoadProgress(
-      chunks.map((c) => c.text),
-      (_pct, _stage, done, total) => {
-        onProgress(
-          Math.min(99, Math.round(((i + (done || 0) / Math.max(total || 1, 1)) / Math.max(docs.length, 1)) * 100)),
-          `Embedding doc ${i + 1}/${docs.length}…`
-        );
-      }
-    );
-    const problem = describeEmbeddingProblem(vecs, chunks.length);
-    if (problem) {
-      throw new Error(`Doc ${i + 1}/${docs.length}: bad engine output (${problem})`);
-    }
-    await axios.post('/api/ai/index', {
-      documentId: docs[i].id,
-      chunks: chunks.map((c, k) => ({ index: c.index, text: c.text, embedding: vecs[k] })),
-    }).catch((err: any) => {
-      // Re-throw with the server's validation message (or HTTP status) intact —
-      // "Request failed with status 400" alone tells us nothing.
-      const serverMsg = err?.response?.data?.error;
-      const status = err?.response?.status;
-      // Client-side snapshot: proves what WE sent, so a mismatch with what the
-      // server claims to receive is diagnosable (stale build, proxy mangling…).
-      const firstVec: unknown = (vecs as unknown[])[0];
-      const snapshot =
-        ` [client: ${chunks.length} chunks, ${Array.isArray(vecs) ? vecs.length : typeof vecs} vecs` +
-        `, firstVecLen=${Array.isArray(firstVec) ? firstVec.length : typeof firstVec}` +
-        `, firstVal=${Array.isArray(firstVec) ? String(firstVec.slice(0, 2)) : 'n/a'}]`;
-      throw new Error(
-        serverMsg
-          ? `Doc ${i + 1}/${docs.length} rejected: ${serverMsg}${serverMsg.includes('No usable chunks') ? snapshot : ''}`
-          : `Doc ${i + 1}/${docs.length} save failed${status ? ` (HTTP ${status})` : ''}: ${err?.message || 'unknown error'}`
+    try {
+      const chunks = docToChunks(docs[i].content);
+      if (chunks.length === 0) continue;
+      const vecs = await embedTextsWithLoadProgress(
+        chunks.map((c) => c.text),
+        (_pct, _stage, done, total) => {
+          onProgress(
+            Math.min(99, Math.round(((i + (done || 0) / Math.max(total || 1, 1)) / Math.max(docs.length, 1)) * 100)),
+            `Embedding doc ${i + 1}/${docs.length}…`
+          );
+        }
       );
-    });
-    doneChunks += chunks.length;
-    docCount++;
-    onProgress(Math.round(((i + 1) / docs.length) * 100), `Indexed ${docCount} docs…`);
+      const problem = describeEmbeddingProblem(vecs, chunks.length);
+      if (problem) {
+        throw new Error(`bad engine output (${problem})`);
+      }
+      await axios.post('/api/ai/index', {
+        documentId: docs[i].id,
+        chunks: chunks.map((c, k) => ({ index: c.index, text: c.text, embedding: vecs[k] })),
+      }).catch((err: any) => {
+        // Re-throw with the server's validation message (or HTTP status) intact —
+        // "Request failed with status 400" alone tells us nothing.
+        const serverMsg = err?.response?.data?.error;
+        const status = err?.response?.status;
+        // Client-side snapshot: proves what WE sent, so a mismatch with what the
+        // server claims to receive is diagnosable (stale build, proxy mangling…).
+        const firstVec: unknown = (vecs as unknown[])[0];
+        const snapshot =
+          ` [client: ${chunks.length} chunks, ${Array.isArray(vecs) ? vecs.length : typeof vecs} vecs` +
+          `, firstVecLen=${Array.isArray(firstVec) ? firstVec.length : typeof firstVec}` +
+          `, firstVal=${Array.isArray(firstVec) ? String(firstVec.slice(0, 2)) : 'n/a'}]`;
+        throw new Error(
+          serverMsg
+            ? `rejected: ${serverMsg}${serverMsg.includes('No usable chunks') ? snapshot : ''}`
+            : `save failed${status ? ` (HTTP ${status})` : ''}: ${err?.message || 'unknown error'}`
+        );
+      });
+      doneChunks += chunks.length;
+      docCount++;
+    } catch (err: any) {
+      if (err?.message === 'cancelled') throw err;
+      // One bad doc must not abort the whole workspace run.
+      failed.push(`${docs[i].title}: ${err?.message || 'failed'}`);
+      console.error(`Indexing skipped doc ${docs[i].id}:`, err);
+    }
+    onProgress(Math.round(((i + 1) / docs.length) * 100), `Indexed ${docCount}/${docs.length} docs…`);
   }
-  return { docs: docCount, chunks: doneChunks };
+  return { docs: docCount, chunks: doneChunks, failed };
 }
 
 export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -148,17 +156,29 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
         (pct, stage) => setProgress({ pct, stage }),
         cancelRef.current
       );
-      try {
-        localStorage.setItem('ai-index-optin', '1');
-      } catch {}
+      if (res.docs > 0) {
+        try {
+          localStorage.setItem('ai-index-optin', '1');
+        } catch {}
+      }
       await refreshStatus();
+      const failedNote =
+        res.failed.length > 0
+          ? ` Skipped ${res.failed.length}: ${res.failed.slice(0, 3).join(' · ')}${res.failed.length > 3 ? '…' : ''} — retry to pick these up.`
+          : '';
       setMessages((m) => [
         ...m,
         {
           role: 'ai',
-          text: `Memory ready — indexed ${res.docs} documents (${res.chunks} passages). Ask me anything about your notes.`,
+          text:
+            res.docs > 0
+              ? `Memory ready — indexed ${res.docs} document${res.docs === 1 ? '' : 's'} (${res.chunks} passages).${failedNote} Ask me anything about your notes.`
+              : `Couldn't index anything.${failedNote || ' Check the error above and retry.'}`,
         },
       ]);
+      if (res.failed.length > 0) {
+        setIndexError(`Some docs were skipped:${res.failed.length > 0 ? ' ' + res.failed.slice(0, 3).join(' · ') : ''}`);
+      }
     } catch (err: any) {
       if (err?.message !== 'cancelled') {
         console.error('Workspace index failed:', err);

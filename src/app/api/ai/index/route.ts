@@ -88,17 +88,21 @@ export async function POST(request: Request) {
     }
 
     const { prisma } = await import('@/lib/prisma');
+    // One delete + ONE multi-row insert (no interactive transaction: 100
+    // sequential inserts exceed Prisma's 5s transaction timeout on hosted DBs).
     // Numbers-only vector literals (validated finite above) — safe to inline.
-    await prisma.$transaction(async (tx) => {
-      await tx.documentChunk.deleteMany({ where: { documentId } });
-      for (const r of rows) {
-        await tx.$executeRawUnsafe(
-          `INSERT INTO "DocumentChunk" (id, "documentId", "chunkIndex", text, embedding, "updatedAt") ` +
-            `VALUES ('${uuidv4()}', '${documentId.replace(/'/g, '')}', ${r.index}, ` +
-            `'${r.text.replace(/'/g, "''")}', '${r.vec}'::vector, NOW())`
-        );
-      }
-    });
+    // If the insert fails the doc is left chunk-less; retrying re-creates it.
+    await prisma.documentChunk.deleteMany({ where: { documentId } });
+    const values = rows
+      .map(
+        (r) =>
+          `('${uuidv4()}', '${documentId.replace(/'/g, '')}', ${r.index}, ` +
+          `'${r.text.replace(/'/g, "''")}', '${r.vec}'::vector, NOW())`
+      )
+      .join(',');
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "DocumentChunk" (id, "documentId", "chunkIndex", text, embedding, "updatedAt") VALUES ${values}`
+    );
 
     return NextResponse.json({ indexed: rows.length, skipped });
   } catch (error: any) {
