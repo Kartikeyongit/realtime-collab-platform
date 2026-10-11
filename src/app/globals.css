@@ -826,31 +826,47 @@ html {
   }
 }
 
-/* Focus mode */
+/* Focus mode — zen chrome + paragraph focus.
+   Chrome fades out entirely (no blur ghost); the toggle floats as an exit pill.
+   Paragraph dimming is driven by local ProseMirror decorations (`.focus-dim`). */
+body.editor-focus nav,
+body.editor-focus .doc-header {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease, visibility 0.3s;
+}
+body.editor-focus .editor-wrapper .toolbar-area {
+  visibility: hidden;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+body.editor-focus [data-focus-toggle] {
+  visibility: visible !important;
+  pointer-events: auto !important;
+  position: fixed !important;
+  bottom: 22px;
+  right: 22px;
+  z-index: 70;
+  background: #fff !important;
+  border: 1.5px solid #e7e5e4 !important;
+  border-radius: 999px !important;
+  padding: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  color: #f97316 !important;
+  opacity: 1 !important;
+}
 body.editor-focus .editor-content-area {
   position: relative;
   z-index: 50;
 }
-body.editor-focus .editor-wrapper .toolbar-area,
-body.editor-focus nav,
-body.editor-focus .editor-wrapper ~ *:not(.editor-content-area) {
-  filter: blur(1px);
-  opacity: 0.15;
-  pointer-events: none;
-  transition: all 0.25s ease;
+body.editor-focus .ProseMirror > * {
+  transition: opacity 0.25s ease;
 }
-body.editor-focus .editor-content-area {
-  opacity: 1;
-  filter: none;
-}
-body.editor-focus .editor-content-area .ProseMirror {
-  outline: 2px solid #f97316;
-  outline-offset: -2px;
-  border-radius: 4px;
-}
-body.editor-focus [data-focus-toggle] {
-  opacity: 1 !important;
-  pointer-events: auto !important;
+body.editor-focus .ProseMirror .focus-dim {
+  opacity: 0.25;
 }
 
 /* Toolbar wrapper sticks (it spans the tall editor wrapper, so it can travel).

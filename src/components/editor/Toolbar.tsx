@@ -287,7 +287,9 @@ function TableMenu({ editor }: { editor: Editor }) {
 }
 
 export function Toolbar({ editor }: ToolbarProps) {
-  const [focusMode, setFocusMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem('collabdocs-focus-mode') === '1'
+  );
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [fontFamily, setFontFamily] = useState('');
   const [fontSize, setFontSize] = useState('');
@@ -304,25 +306,60 @@ export function Toolbar({ editor }: ToolbarProps) {
     return () => { editor.off('selectionUpdate', update); editor.off('update', update); };
   }, [editor]);
 
+  // Single path for entering/exiting focus: body class + editor decorations
+  // + persistence. Cleanup removes the body class so it never leaks across pages.
+  useEffect(() => {
+    if (!editor) return;
+    document.body.classList.toggle('editor-focus', focusMode);
+    try {
+      editor.commands.setParagraphFocus(focusMode);
+    } catch {}
+    try {
+      localStorage.setItem('collabdocs-focus-mode', focusMode ? '1' : '0');
+    } catch {}
+    return () => {
+      document.body.classList.remove('editor-focus');
+      try {
+        editor.commands.setParagraphFocus(false);
+      } catch {}
+    };
+  }, [editor, focusMode]);
+
   useEffect(() => {
     if (!focusMode) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setFocusMode(false);
-        document.body.classList.remove('editor-focus');
-      }
+      if (e.key === 'Escape') setFocusMode(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [focusMode]);
 
+  // Typewriter scrolling: keep the cursor line near 38% viewport while focused.
+  // Gated on isFocused so remote collaborators' edits never yank your view.
+  useEffect(() => {
+    if (!editor || !focusMode) return;
+    const center = () => {
+      try {
+        if (!editor.isFocused || !editor.isEditable) return;
+        const container = document.getElementById('editor-container');
+        if (!container) return;
+        const { from } = editor.state.selection;
+        const coords = editor.view.coordsAtPos(from);
+        const rect = container.getBoundingClientRect();
+        const targetY = rect.top + container.clientHeight * 0.38;
+        container.scrollTop += coords.top - targetY;
+      } catch {}
+    };
+    editor.on('selectionUpdate', center);
+    editor.on('update', center);
+    return () => { editor.off('selectionUpdate', center); editor.off('update', center); };
+  }, [editor, focusMode]);
+
   if (!editor) return null;
 
   const toggleFocus = useCallback(() => {
-    const next = !focusMode;
-    setFocusMode(next);
-    document.body.classList.toggle('editor-focus', next);
-  }, [focusMode]);
+    setFocusMode((prev) => !prev);
+  }, []);
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

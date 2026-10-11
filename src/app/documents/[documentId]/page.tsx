@@ -162,7 +162,7 @@ export default function DocumentPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#fdfbf7' }}>
       {/* Document Header - matches nav height */}
-      <header style={{ 
+      <header className="doc-header" style={{ 
         background: 'white', 
         borderBottom: '1.5px solid #e7e5e4', 
         padding: '0 20px', 
