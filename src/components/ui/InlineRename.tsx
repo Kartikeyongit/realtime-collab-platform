@@ -49,7 +49,7 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
 
   if (!canRename) {
     return (
-      <span style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917', letterSpacing: '-0.02em', lineHeight: '1' }}>
+      <span style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917', letterSpacing: '-0.02em', lineHeight: '1.3' }}>
         {title || 'Untitled'}
       </span>
     );
@@ -71,7 +71,7 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
           fontSize: '16px',
           color: '#1c1917',
           letterSpacing: '-0.02em',
-          lineHeight: '1',
+          lineHeight: '1.3',
           outline: 'none',
           border: 'none',
           background: 'transparent',
@@ -92,7 +92,7 @@ export function InlineRename({ documentId, initialTitle, onRename, canRename = t
         fontSize: '16px',
         color: '#1c1917',
         letterSpacing: '-0.02em',
-        lineHeight: '1',
+        lineHeight: '1.3',
         cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',

@@ -209,7 +209,6 @@ export default function DocumentPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-          <div style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
           <button onClick={() => setShowPalette(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Quick switch (Ctrl+K)">⌘K</button>
           <button onClick={() => setShowHistory(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Version history"><Clock size={15} /></button>
           <DocumentTags
