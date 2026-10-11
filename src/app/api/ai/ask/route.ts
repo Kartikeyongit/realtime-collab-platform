@@ -98,7 +98,10 @@ export async function POST(request: Request) {
           role: 'system',
           content:
             'You answer questions using ONLY the provided document excerpts. ' +
-            'Be concise. If the excerpts lack the answer, say so plainly. ' +
+            'Reply like a helpful chat assistant: answer directly in a sentence or two, ' +
+            'put document titles in **bold**, and use short markdown lists when listing several things. ' +
+            'Never say "the excerpt labeled" — just answer. ' +
+            'If the excerpts lack the answer, say so plainly. ' +
             'Never invent facts beyond the excerpts.',
         },
         { role: 'user', content: `Excerpts:\n${context}\nQuestion: ${question}` },

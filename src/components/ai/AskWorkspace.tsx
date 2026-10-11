@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { X, Send, Loader2, Sparkles, Database, FileText, AlertTriangle } from 'lucide-react';
+import { Markdown } from './Markdown';
 import { docToChunks } from '@/lib/ai/chunks';
 import { embedTextsWithLoadProgress, describeEmbeddingProblem } from '@/lib/ai/embeddings';
 import { showError } from '@/lib/toast';
@@ -297,7 +298,9 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
         <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10, minHeight: 180 }}>
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', color: '#a8a29e', fontSize: 13, padding: '28px 12px' }}>
-              <FileText size={26} color="#e7e5e4" style={{ marginBottom: 8 }} />
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                <FileText size={26} color="#e7e5e4" />
+              </div>
               <div style={{ fontWeight: 600, color: '#78716c' }}>Ask anything across your notes</div>
               <div>e.g. “What did we decide about the launch?” · “Summarize my trip ideas”</div>
             </div>
@@ -316,7 +319,7 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
                   whiteSpace: 'pre-wrap',
                 }}
               >
-                {m.text}
+                {m.role === 'user' ? m.text : <Markdown text={m.text} />}
               </div>
               {m.citations && m.citations.length > 0 && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>

@@ -902,6 +902,93 @@ body.editor-focus .ProseMirror .focus-dim {
   }
 }
 
+/* AI chat markdown (Ask workspace) — compact, warm, scoped */
+.md, .md-compact {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #292524;
+  overflow-wrap: break-word;
+}
+.md p, .md-compact p {
+  margin: 0 0 8px;
+}
+.md p:last-child, .md-compact p:last-child,
+.md ul:last-child, .md ol:last-child,
+.md pre:last-child, .md blockquote:last-child {
+  margin-bottom: 0;
+}
+.md ul, .md ol, .md-compact ul, .md-compact ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.md li, .md-compact li {
+  margin: 2px 0;
+}
+.md strong, .md-compact strong {
+  font-weight: 700;
+  color: #1c1917;
+}
+.md code, .md-compact code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.md pre, .md-compact pre {
+  background: #1c1917;
+  color: #fafaf9;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 0 0 8px;
+  font-size: 12.5px;
+}
+.md pre code, .md-compact pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+.md blockquote, .md-compact blockquote {
+  border-left: 3px solid #fed7aa;
+  padding-left: 12px;
+  margin: 0 0 8px;
+  color: #78716c;
+}
+.md h1, .md h2, .md h3, .md h4,
+.md-compact h1, .md-compact h2, .md-compact h3, .md-compact h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 10px 0 6px;
+  color: #1c1917;
+}
+.md h1, .md-compact h1 { font-size: 16px; }
+.md h2, .md-compact h2 { font-size: 15px; }
+.md h3, .md-compact h3,
+.md h4, .md-compact h4 { font-size: 14px; }
+.md a, .md-compact a {
+  color: #ea580c;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md table, .md-compact table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.md th, .md-compact th {
+  background: #fff7ed;
+  font-weight: 700;
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 2px solid #fed7aa;
+}
+.md td, .md-compact td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f5f5f4;
+}
+
 /* Extra small devices */
 @media (max-width: 480px) {
   /* Document header metadata: hide presence + extra info */

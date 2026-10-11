@@ -226,7 +226,7 @@ export default function DashboardPage() {
         </h1>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={openToday} title="Open today's journal">Today</button>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={quickNote} title="Capture a quick note (Alt+N)">+ Quick note</button>
-        <button className="btn btn-sm dash-filter" onClick={() => setAskOpen(true)} title="Ask across all your notes">✨ Ask</button>
+        <button className="btn btn-secondary btn-sm dash-filter" onClick={() => setAskOpen(true)} title="Ask across all your notes">✨ Ask</button>
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
 
