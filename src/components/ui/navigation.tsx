@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { showError } from '@/lib/toast';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare } from 'lucide-react';
 
 export function Navigation() {
@@ -112,6 +113,7 @@ export function Navigation() {
                 <Plus size={14} />
                 {creating ? '...' : 'New'}
               </button>
+              <NotificationCenter />
               <div style={{ position: 'relative' }}>
                 <button onClick={() => setMenuOpen(!menuOpen)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>
                   <div className="avatar avatar-sm">{session.user?.name?.charAt(0) || 'U'}</div>
