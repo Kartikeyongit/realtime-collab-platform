@@ -95,6 +95,8 @@ export default function DocumentPage() {
       const response = await axios.get(`/api/documents/${documentId}`, { signal: abortRef.current.signal });
       setDocument(response.data);
       setTitle(response.data.title || 'Untitled');
+      // Mark this doc's notifications read (fire-and-forget).
+      axios.patch('/api/notifications/read-all', { documentId }).catch(() => {});
     } catch (err: any) {
       if (axios.isCancel(err)) return;
       if (err.response?.status === 404) setError('Document not found');
@@ -268,6 +270,10 @@ export default function DocumentPage() {
             documentId={documentId}
             editor={editorInstance}
             emitComment={emitComment}
+            people={[
+              ...(document?.owner ? [{ id: document.owner.id, name: document.owner.name ?? null }] : []),
+              ...((document?.collaborators || []).map((c) => ({ id: c.user.id, name: c.user.name ?? null }))),
+            ]}
             onClose={() => setShowComments(false)}
             onResolve={async (id) => { 
               await axios.patch(`/api/documents/${documentId}/comments/${id}`, { resolved: true }); 

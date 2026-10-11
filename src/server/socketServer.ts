@@ -45,16 +45,22 @@ export function setupSocketServer(httpServer: HTTPServer) {
     const { documentId } = socket.handshake.query;
     const token = socket.handshake.auth?.token as string | undefined;
 
-    if (!documentId || !token) {
+    if (!token) {
       socket.disconnect();
       return;
     }
 
     const userId = verifyWsToken(token);
-    if (!userId) {
+    if (!userId || userId.startsWith('share:')) {
       socket.disconnect();
       return;
     }
+
+    // Personal room first: notification pushes work even without a document
+    // (e.g. the bell's lightweight user-only socket on the dashboard).
+    socket.join(`user:${userId}`);
+
+    if (!documentId) return; // notification-only socket
 
     // Check document access before allowing connection
     try {
@@ -73,7 +79,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
 
     const docId = documentId as string;
 
-    // Join document room
+    // Join document room (personal room already joined above)
     socket.join(docId);
 
     // Track users in rooms
@@ -157,34 +163,96 @@ export function setupSocketServer(httpServer: HTTPServer) {
 
         io.to(docId).emit('comment:new', comment);
 
-        // Create notifications for document owner and collaborators
-        const docWithAccess = await prisma.document.findUnique({
-          where: { id: docId },
-          select: {
-            ownerId: true,
-            collaborators: { select: { userId: true } },
-          },
-        });
+        // Notifications with reply/mention distinction + preferences.
+        // dynamic import keeps the hot presence path free of the extra weight.
+        try {
+          const { extractMentionedIds, resolveCommentRecipients, loadPrefs } = await import('./notify');
 
-        if (docWithAccess) {
-          const notifyUserIds = new Set<string>();
-          if (docWithAccess.ownerId !== userId) {
-            notifyUserIds.add(docWithAccess.ownerId);
-          }
-          for (const c of docWithAccess.collaborators) {
-            if (c.userId !== userId) {
-              notifyUserIds.add(c.userId);
+          const docWithAccess = await prisma.document.findUnique({
+            where: { id: docId },
+            select: {
+              ownerId: true,
+              owner: { select: { id: true, name: true } },
+              title: true,
+              collaborators: { select: { userId: true, user: { select: { id: true, name: true } } } },
+            },
+          });
+
+          if (docWithAccess) {
+            let parentAuthorId: string | null = null;
+            if (comment.parentId) {
+              const parent = await prisma.comment.findUnique({
+                where: { id: comment.parentId },
+                select: { userId: true },
+              });
+              parentAuthorId = parent?.userId ?? null;
+            }
+
+            const candidates = [
+              docWithAccess.owner,
+              ...docWithAccess.collaborators.map((c) => c.user),
+            ];
+            const mentionedUserIds = extractMentionedIds(comment.content, candidates);
+
+            if (mentionedUserIds.length > 0) {
+              await prisma.commentMention.createMany({
+                data: mentionedUserIds.map((uid) => ({ commentId: comment.id, userId: uid })),
+                skipDuplicates: true,
+              });
+            }
+
+            const allIds = [
+              docWithAccess.ownerId,
+              ...docWithAccess.collaborators.map((c) => c.userId),
+              ...(parentAuthorId ? [parentAuthorId] : []),
+              ...mentionedUserIds,
+            ];
+            const prefs = await loadPrefs(prisma, allIds);
+
+            const recipients = resolveCommentRecipients({
+              ownerId: docWithAccess.ownerId,
+              collaboratorIds: docWithAccess.collaborators.map((c) => c.userId),
+              actorId: userId,
+              documentId: docId,
+              parentAuthorId,
+              mentionedUserIds,
+              prefs,
+            });
+
+            if (recipients.length > 0) {
+              const created = await Promise.all(
+                recipients.map((r) =>
+                  prisma.notification.create({
+                    data: {
+                      userId: r.userId,
+                      commentId: comment.id,
+                      type: r.kind,
+                      actorId: userId,
+                      documentId: docId,
+                    },
+                    select: { id: true, type: true, createdAt: true, userId: true },
+                  })
+                )
+              );
+
+              const actorName = user?.name || 'Someone';
+              for (const n of created) {
+                io.to(`user:${n.userId}`).emit('notification:new', {
+                  id: n.id,
+                  type: n.type,
+                  actor: { name: actorName },
+                  documentId: docId,
+                  documentTitle: docWithAccess.title,
+                  commentId: comment.id,
+                  excerpt: comment.content.slice(0, 120),
+                  read: false,
+                  createdAt: n.createdAt.toISOString(),
+                });
+              }
             }
           }
-
-          if (notifyUserIds.size > 0) {
-            await prisma.notification.createMany({
-              data: Array.from(notifyUserIds).map(uid => ({
-                userId: uid,
-                commentId: comment.id,
-              })),
-            });
-          }
+        } catch (error) {
+          console.error('Error creating comment notifications:', error);
         }
       } catch (error) {
         console.error('Error creating comment:', error);

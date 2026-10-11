@@ -34,31 +34,64 @@ export async function POST(
       },
     });
 
-    // Create notifications for document owner and collaborators (excluding comment author)
+    // Notifications: owner + collaborators, with reply/mention distinction
+    // and per-user preferences (all | personal | none + muted docs).
+    const { extractMentionedIds, resolveCommentRecipients, loadPrefs } = await import('@/server/notify');
+
     const document = await prisma.document.findUnique({
       where: { id: params.documentId },
       select: {
         ownerId: true,
-        collaborators: { select: { userId: true } },
+        owner: { select: { id: true, name: true } },
+        collaborators: { select: { userId: true, user: { select: { id: true, name: true } } } },
       },
     });
 
     if (document) {
-      const notifyUserIds = new Set<string>();
-      if (document.ownerId !== session.user.id) {
-        notifyUserIds.add(document.ownerId);
-      }
-      for (const c of document.collaborators) {
-        if (c.userId !== session.user.id) {
-          notifyUserIds.add(c.userId);
-        }
+      let parentAuthorId: string | null = null;
+      if (comment.parentId) {
+        const parent = await prisma.comment.findUnique({
+          where: { id: comment.parentId },
+          select: { userId: true },
+        });
+        parentAuthorId = parent?.userId ?? null;
       }
 
-      if (notifyUserIds.size > 0) {
+      const candidates = [
+        document.owner,
+        ...document.collaborators.map((c) => c.user),
+      ];
+      const mentionedUserIds = extractMentionedIds(comment.content, candidates);
+
+      if (mentionedUserIds.length > 0) {
+        await prisma.commentMention.createMany({
+          data: mentionedUserIds.map((userId) => ({ commentId: comment.id, userId })),
+          skipDuplicates: true,
+        });
+      }
+
+      const allIds = [document.ownerId, ...document.collaborators.map((c) => c.userId)];
+      if (parentAuthorId) allIds.push(parentAuthorId);
+      const prefs = await loadPrefs(prisma, [...allIds, ...mentionedUserIds]);
+
+      const recipients = resolveCommentRecipients({
+        ownerId: document.ownerId,
+        collaboratorIds: document.collaborators.map((c) => c.userId),
+        actorId: session.user.id,
+        documentId: params.documentId,
+        parentAuthorId,
+        mentionedUserIds,
+        prefs,
+      });
+
+      if (recipients.length > 0) {
         await prisma.notification.createMany({
-          data: Array.from(notifyUserIds).map(userId => ({
-            userId,
+          data: recipients.map((r) => ({
+            userId: r.userId,
             commentId: comment.id,
+            type: r.kind,
+            actorId: session.user.id,
+            documentId: params.documentId,
           })),
         });
       }

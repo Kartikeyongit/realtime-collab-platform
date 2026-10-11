@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Reply, Trash2, Check, Send, X } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
+import { MentionInput, type MentionPerson } from './MentionInput';
 
 interface Comment {
   id: string;
@@ -26,13 +28,31 @@ interface CommentThreadProps {
   editor?: Editor | null;
   emitComment?: (comment: any) => void;
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  people?: MentionPerson[];
 }
 
-export function CommentThread({ comments, onResolve, onDelete, onClose, documentId, editor, emitComment, addToast }: CommentThreadProps) {
+export function CommentThread({ comments, onResolve, onDelete, onClose, documentId, editor, emitComment, addToast, people = [] }: CommentThreadProps) {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [newComment, setNewComment] = useState('');
+  const [flashId, setFlashId] = useState<string | null>(null);
+
+  // Deep link (?comment=): scroll to the thread and flash it.
+  useEffect(() => {
+    const target = searchParams.get('comment');
+    if (!target || comments.length === 0) return;
+    const t = setTimeout(() => {
+      const el = window.document.getElementById(`comment-${target}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFlashId(target);
+        setTimeout(() => setFlashId(null), 2200);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchParams, comments]);
 
   const getSelectionPosition = () => {
     if (!editor) return {};
@@ -83,13 +103,13 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
             {session?.user?.name?.charAt(0) || '?'}
           </div>
           <div style={{ flex: 1 }}>
-            <input
+            <MentionInput
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Add a comment..."
-              className="input"
+              onChange={setNewComment}
+              onSubmit={handleAddComment}
+              people={people}
+              placeholder="Add a comment... (type @ to mention)"
               style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
             />
             {newComment.trim() && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
@@ -108,7 +128,17 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {comments.map((comment) => (
-              <div key={comment.id} style={{ opacity: comment.resolved ? 0.6 : 1 }}>
+              <div
+                key={comment.id}
+                id={`comment-${comment.id}`}
+                style={{
+                  opacity: comment.resolved ? 0.6 : 1,
+                  background: flashId === comment.id ? '#fff7ed' : 'transparent',
+                  borderRadius: 10,
+                  padding: flashId === comment.id ? 8 : 0,
+                  transition: 'background 0.3s ease',
+                }}
+              >
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', flexShrink: 0 }}>
                     {comment.user?.name?.charAt(0) || '?'}
@@ -144,24 +174,22 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
                 {/* Reply Input */}
                 {replyTo === comment.id && (
                   <div style={{ marginTop: '8px', marginLeft: '34px', display: 'flex', gap: '6px' }}>
-                    <input
+                    <MentionInput
                       value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Write a reply..."
-                      className="input"
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '8px' }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && replyText.trim()) {
-                          e.preventDefault();
-                          emitComment?.({
-                            documentId,
-                            content: replyText.trim(),
-                            parentId: comment.id,
-                          });
-                          setReplyText('');
-                          setReplyTo(null);
-                        }
+                      onChange={setReplyText}
+                      onSubmit={() => {
+                        if (!replyText.trim()) return;
+                        emitComment?.({
+                          documentId,
+                          content: replyText.trim(),
+                          parentId: comment.id,
+                        });
+                        setReplyText('');
+                        setReplyTo(null);
                       }}
+                      people={people}
+                      placeholder="Write a reply... (type @ to mention)"
+                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '8px' }}
                     />
                     <button onClick={() => {
                       if (!replyText.trim()) return;
@@ -180,7 +208,18 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
                 {comment.replies && comment.replies.length > 0 && (
                   <div style={{ marginTop: '8px', marginLeft: '34px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {comment.replies.map((reply) => (
-                      <div key={reply.id} style={{ display: 'flex', gap: '8px' }}>
+                      <div
+                        key={reply.id}
+                        id={`comment-${reply.id}`}
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          background: flashId === reply.id ? '#fff7ed' : 'transparent',
+                          borderRadius: 8,
+                          padding: flashId === reply.id ? 6 : 0,
+                          transition: 'background 0.3s ease',
+                        }}
+                      >
                         <div className="avatar avatar-sm" style={{ background: '#d6d3d1', color: '#78716c', width: '22px', height: '22px', fontSize: '10px' }}>
                           {reply.user?.name?.charAt(0) || '?'}
                         </div>

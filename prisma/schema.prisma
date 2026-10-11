@@ -22,7 +22,9 @@ model User {
   mentions       CommentMention[]
   presence       Presence[]
   collaborations DocumentCollaborator[]
-  notifications  Notification[]
+  notifications  Notification[] @relation("NotificationRecipient")
+  actorNotifications Notification[] @relation("NotificationActor")
+  notificationPreference NotificationPreference?
   folders        Folder[]
   tags           Tag[]
   versions       DocumentVersion[]
@@ -76,6 +78,7 @@ model Document {
   isPinned      Boolean                @default(false)
   tags          DocumentTag[]
   versions      DocumentVersion[]
+  notifications Notification[]
 
   @@index([ownerId, updatedAt])
   @@index([folderId])
@@ -197,14 +200,31 @@ model ShareLink {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  commentId String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  // comment notifications carry commentId; share notifications don't.
+  commentId  String?
+  // comment | reply | mention | share (old rows read as comment)
+  type       String   @default("comment")
+  actorId    String?
+  documentId String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user     User     @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor    User?    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  comment  Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model NotificationPreference {
+  userId     String   @id
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // all | personal (replies + mentions + shares to you) | none
+  level      String   @default("all")
+  mutedDocIds String[] @default([])
+  updatedAt  DateTime @updatedAt
 }

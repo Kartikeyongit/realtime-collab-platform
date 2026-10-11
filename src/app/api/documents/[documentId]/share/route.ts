@@ -37,6 +37,30 @@ export async function POST(
     include: { user: { select: { id: true, name: true, email: true } } },
   });
 
+  // Notify the added user (skipped when opted out or doc muted).
+  try {
+    const { resolveShareRecipients, loadPrefs } = await import('@/server/notify');
+    const prefs = await loadPrefs(prisma, [user.id]);
+    const recipients = resolveShareRecipients({
+      addedUserIds: [user.id],
+      actorId: session.user.id,
+      documentId: params.documentId,
+      prefs,
+    });
+    if (recipients.length > 0) {
+      await prisma.notification.createMany({
+        data: recipients.map((r) => ({
+          userId: r.userId,
+          type: r.kind,
+          actorId: session.user.id,
+          documentId: params.documentId,
+        })),
+      });
+    }
+  } catch {
+    // Sharing must never fail because notifications did.
+  }
+
   return NextResponse.json(collaborator, { status: 201 });
 }
 
