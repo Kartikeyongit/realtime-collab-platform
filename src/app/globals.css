@@ -382,13 +382,13 @@ body {
   padding-left: 2px !important;
   margin: 10px 0;
 }
-.ProseMirror ul[data-type='taskList'] li[data-type='taskItem'] {
+.ProseMirror ul[data-type='taskList'] > li {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   margin: 7px 0;
 }
-.ProseMirror ul[data-type='taskList'] li[data-type='taskItem']::marker {
+.ProseMirror ul[data-type='taskList'] > li::marker {
   content: none !important;
 }
 .ProseMirror ul[data-type='taskList'] li > label {
@@ -430,7 +430,7 @@ body {
 .ProseMirror ul[data-type='taskList'] li > div > p {
   margin: 0;
 }
-.ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div {
+.ProseMirror ul[data-type='taskList'] > li[data-checked='true'] > div {
   color: #a8a29e;
   text-decoration: line-through;
   text-decoration-color: #d6d3d1;
