@@ -277,7 +277,7 @@ export function SearchReplacePanel({ editor, isOpen, onClose, addToast }: Search
     >
       <style>{`
         .search-match { background: #fef08a; border-radius: 2px; }
-        .search-match-active { background: #fbbf24; box-shadow: 0 0 0 1.5px #f97316; }
+        .search-match-active { background: #fde047; box-shadow: 0 0 0 1.5px #eab308; }
       `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1.5px solid #e7e5e4', background: '#fafaf9' }}>
         <h3 style={{ fontWeight: 600, fontSize: '14px' }}>Find & Replace</h3>
