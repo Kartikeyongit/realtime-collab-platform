@@ -370,7 +370,6 @@ export function Toolbar({ editor }: ToolbarProps) {
     <div className="toolbar-scroll toolbar-strip" style={{
       background: 'white', borderBottom: '1.5px solid #e7e5e4',
       display: 'flex', alignItems: 'stretch', flexShrink: 0,
-      position: 'sticky', top: 0, zIndex: 10,
     }}>
       {/* Scrollable tools — single strip on all screens, safe for mobile (overflowX auto) */}
       <div className="toolbar-scroll-inner" style={{
