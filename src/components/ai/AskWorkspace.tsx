@@ -60,6 +60,16 @@ async function indexAllDocs(
     await axios.post('/api/ai/index', {
       documentId: docs[i].id,
       chunks: chunks.map((c, k) => ({ index: c.index, text: c.text, embedding: vecs[k] })),
+    }).catch((err: any) => {
+      // Re-throw with the server's validation message (or HTTP status) intact —
+      // "Request failed with status 400" alone tells us nothing.
+      const serverMsg = err?.response?.data?.error;
+      const status = err?.response?.status;
+      throw new Error(
+        serverMsg
+          ? `Doc ${i + 1}/${docs.length} rejected: ${serverMsg}`
+          : `Doc ${i + 1}/${docs.length} save failed${status ? ` (HTTP ${status})` : ''}: ${err?.message || 'unknown error'}`
+      );
     });
     doneChunks += chunks.length;
     docCount++;

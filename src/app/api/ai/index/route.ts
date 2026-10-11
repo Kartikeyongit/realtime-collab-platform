@@ -53,18 +53,26 @@ export async function POST(request: Request) {
     if (!allowed) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
     const rows: Array<{ index: number; text: string; vec: string }> = [];
+    let skipped = 0;
     for (const c of chunks) {
       if (typeof c?.index !== 'number' || typeof c?.text !== 'string') {
-        return NextResponse.json({ error: 'Bad chunk shape' }, { status: 400 });
+        skipped++;
+        continue;
       }
       const text = c.text.slice(0, MAX_TEXT).trim();
-      if (!text) continue;
+      if (!text) {
+        skipped++;
+        continue;
+      }
       const vec = cleanVec(c.embedding);
-      if (!vec) return NextResponse.json({ error: `Embedding must be ${EMBED_DIMS} finite numbers` }, { status: 400 });
+      if (!vec) {
+        skipped++;
+        continue;
+      }
       rows.push({ index: Math.floor(c.index), text, vec });
     }
     if (rows.length === 0) {
-      return NextResponse.json({ error: 'No usable chunks' }, { status: 400 });
+      return NextResponse.json({ error: 'No usable chunks (all skipped as malformed)' }, { status: 400 });
     }
 
     const { prisma } = await import('@/lib/prisma');
@@ -80,7 +88,7 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ indexed: rows.length });
+    return NextResponse.json({ indexed: rows.length, skipped });
   } catch (error: any) {
     console.error('AI index error:', error.message);
     return NextResponse.json({ error: 'Failed to store index' }, { status: 500 });
