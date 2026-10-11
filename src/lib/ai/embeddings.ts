@@ -1,6 +1,11 @@
-'use client';
-
 /**
+ * Isomorphic embeddings module — deliberately NO 'use client' directive.
+ * Reason: server routes import EMBED_DIMS from here. With 'use client',
+ * Next.js hands server code a client-reference proxy where the constant is
+ * `undefined`, silently failing every vector validation (384 !== undefined).
+ * The module is server-safe: browser APIs are touched only inside functions
+ * that client components call (guarded by `typeof window`), never at top level.
+ *
  * Browser-only embeddings via transformers.js from CDN ($0).
  * - Never bundled: dynamic `import()` through `new Function` so webpack
  *   leaves it alone (and it can never run on the server/Render anyway).

@@ -54,25 +54,37 @@ export async function POST(request: Request) {
 
     const rows: Array<{ index: number; text: string; vec: string }> = [];
     let skipped = 0;
-    for (const c of chunks) {
+    const reasons: string[] = [];
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const c = chunks[ci];
+      const tag = `chunk${ci}`;
       if (typeof c?.index !== 'number' || typeof c?.text !== 'string') {
         skipped++;
+        reasons.push(`${tag}: bad-shape(index=${typeof c?.index},text=${typeof c?.text})`);
         continue;
       }
       const text = c.text.slice(0, MAX_TEXT).trim();
       if (!text) {
         skipped++;
+        reasons.push(`${tag}: empty-text(len=${c.text.length})`);
         continue;
       }
       const vec = cleanVec(c.embedding);
       if (!vec) {
+        const emb: any = c.embedding;
         skipped++;
+        reasons.push(
+          `${tag}: bad-vec(type=${Array.isArray(emb) ? 'array' : typeof emb},len=${Array.isArray(emb) ? emb.length : 'n/a'})`
+        );
         continue;
       }
       rows.push({ index: Math.floor(c.index), text, vec });
     }
     if (rows.length === 0) {
-      return NextResponse.json({ error: 'No usable chunks (all skipped as malformed)' }, { status: 400 });
+      return NextResponse.json(
+        { error: `No usable chunks (all skipped as malformed): ${reasons.slice(0, 5).join('; ')}` },
+        { status: 400 }
+      );
     }
 
     const { prisma } = await import('@/lib/prisma');

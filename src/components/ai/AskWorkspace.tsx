@@ -69,9 +69,16 @@ async function indexAllDocs(
       // "Request failed with status 400" alone tells us nothing.
       const serverMsg = err?.response?.data?.error;
       const status = err?.response?.status;
+      // Client-side snapshot: proves what WE sent, so a mismatch with what the
+      // server claims to receive is diagnosable (stale build, proxy mangling…).
+      const firstVec: unknown = (vecs as unknown[])[0];
+      const snapshot =
+        ` [client: ${chunks.length} chunks, ${Array.isArray(vecs) ? vecs.length : typeof vecs} vecs` +
+        `, firstVecLen=${Array.isArray(firstVec) ? firstVec.length : typeof firstVec}` +
+        `, firstVal=${Array.isArray(firstVec) ? String(firstVec.slice(0, 2)) : 'n/a'}]`;
       throw new Error(
         serverMsg
-          ? `Doc ${i + 1}/${docs.length} rejected: ${serverMsg}`
+          ? `Doc ${i + 1}/${docs.length} rejected: ${serverMsg}${serverMsg.includes('No usable chunks') ? snapshot : ''}`
           : `Doc ${i + 1}/${docs.length} save failed${status ? ` (HTTP ${status})` : ''}: ${err?.message || 'unknown error'}`
       );
     });
