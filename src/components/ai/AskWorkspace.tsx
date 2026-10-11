@@ -140,8 +140,12 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
       ]);
     } catch (err: any) {
       if (err?.message !== 'cancelled') {
+        console.error('Workspace index failed:', err);
+        const detail = typeof err?.message === 'string' ? err.message.slice(0, 160) : '';
         setIndexError(
-          'Could not build the index (model download needs network the first time, ~90MB). Check your connection and retry — nothing was charged or broken.'
+          detail
+            ? `Could not build the index: ${detail}`
+            : 'Could not build the index (model download needs network the first time, ~90MB). Check your connection and retry — nothing was charged or broken.'
         );
       }
     } finally {

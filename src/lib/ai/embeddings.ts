@@ -10,7 +10,10 @@
 
 export const EMBED_MODEL = 'Xenova/all-MiniLM-L6-v2';
 export const EMBED_DIMS = 384;
-const CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm';
+// esm.sh: resolves the package's browser field + node polyfills correctly.
+// (jsdelivr +esm leaves broken relative onnxruntime imports — verified.)
+const CDN = 'https://esm.sh/@xenova/transformers@2.17.2';
+const LOAD_TIMEOUT_MS = 90000;
 
 type Extractor = (texts: string[], opts?: any) => Promise<any>;
 
@@ -27,7 +30,14 @@ async function loadExtractor(
   extractorPromise = (async () => {
     onProgress?.(2, 'Loading AI engine…');
     // eslint-disable-next-line no-new-func
-    const mod = (await new Function('u', 'return import(u)')(CDN)) as any;
+    const importPromise = new Function('u', 'return import(u)')(CDN) as Promise<any>;
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('AI engine download timed out (CDN slow/blocked)')), LOAD_TIMEOUT_MS)
+    );
+    const mod = await Promise.race([importPromise, timeout]);
+    if (!mod || typeof mod.pipeline !== 'function') {
+      throw new Error('AI engine loaded but has no usable pipeline export');
+    }
     mod.env.allowLocalModels = false;
     onProgress?.(8, 'Downloading memory model (one-time, ~90MB)…');
     const extractor = await mod.pipeline('feature-extraction', EMBED_MODEL, {
