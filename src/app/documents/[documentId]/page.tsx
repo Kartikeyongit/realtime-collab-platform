@@ -273,16 +273,28 @@ export default function DocumentPage() {
             ]}
             onClose={() => setShowComments(false)}
             onResolve={async (id) => { 
-              await axios.patch(`/api/documents/${documentId}/comments/${id}`, { resolved: true }); 
-              const updatedComments = (document?.comments || []).map(c => 
-                c.id === id ? { ...c, resolved: true } : c
-              );
-              if (document) setDocument({ ...document, comments: updatedComments });
+              const target = (document?.comments || []).find(c => c.id === id);
+              const next = !(target?.resolved ?? false);
+              try {
+                await axios.patch(`/api/documents/${documentId}/comments/${id}`, { resolved: next }); 
+                const updatedComments = (document?.comments || []).map(c => 
+                  c.id === id ? { ...c, resolved: next } : c
+                );
+                if (document) setDocument({ ...document, comments: updatedComments });
+              } catch {
+                showError('Could not update — only the author can do that');
+              }
             }} 
             onDelete={async (id) => { 
-              await axios.delete(`/api/documents/${documentId}/comments/${id}`); 
-              const filteredComments = (document?.comments || []).filter(c => c.id !== id);
-              if (document) setDocument({ ...document, comments: filteredComments });
+              try {
+                await axios.delete(`/api/documents/${documentId}/comments/${id}`); 
+                const filteredComments = (document?.comments || [])
+                  .filter(c => c.id !== id)
+                  .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.id !== id) }));
+                if (document) setDocument({ ...document, comments: filteredComments });
+              } catch {
+                showError('Could not delete comment');
+              }
             }}
             addToast={addToast}
           />

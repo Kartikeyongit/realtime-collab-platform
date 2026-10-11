@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Reply, Trash2, Check, Send, X } from 'lucide-react';
+import { MessageSquare, Reply, Trash2, Check, Send, X, RotateCcw, LocateFixed, BadgeCheck } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
 import { MentionInput, type MentionPerson } from './MentionInput';
 
@@ -14,6 +14,7 @@ interface Comment {
   userId: string;
   parentId?: string | null;
   resolved: boolean;
+  position?: any;
   createdAt: string;
   user: { id?: string; name?: string | null; image?: string | null };
   replies?: Comment[];
@@ -31,6 +32,79 @@ interface CommentThreadProps {
   people?: MentionPerson[];
 }
 
+/** Render @Name tokens as pills when they match a known person. */
+function renderRichText(text: string, people: MentionPerson[]) {
+  const known = people.filter((p): p is { id: string; name: string } => !!p.name)
+    .sort((a, b) => b.name.length - a.name.length);
+  const parts = text.split(/(@[A-Za-z0-9_.][A-Za-z0-9_. -]*)/g);
+  return parts.map((part, i) => {
+    if (!part.startsWith('@')) return <span key={i}>{part}</span>;
+    const clean = part.slice(1).replace(/[.,;:!?]+$/, '');
+    const hit = known.find((p) => {
+      const lower = part.slice(1).toLowerCase();
+      return lower.startsWith(p.name.toLowerCase()) &&
+        (lower.length === p.name.length || !/[A-Za-z0-9_.]/.test(lower[p.name.length]));
+    });
+    if (!hit) return <span key={i}>{part}</span>;
+    const rest = part.slice(1 + hit.name.length);
+    void clean;
+    return (
+      <span key={i}>
+        <span
+          style={{
+            display: 'inline-block',
+            fontSize: '12px',
+            fontWeight: 600,
+            color: '#6d28d9',
+            background: '#f5f3ff',
+            border: '1px solid #ede9fe',
+            borderRadius: 999,
+            padding: '0 7px',
+            lineHeight: 1.6,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          @{hit.name}
+        </span>
+        {rest}
+      </span>
+    );
+  });
+}
+
+function actionBtn(
+  onClick: () => void,
+  color: string,
+  icon: React.ReactNode,
+  label: string,
+  title?: string
+) {
+  return (
+    <button
+      onClick={onClick}
+      title={title || label}
+      style={{
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '11px',
+        fontWeight: 600,
+        color,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 8px',
+        borderRadius: 999,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f4'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 export function CommentThread({ comments, onResolve, onDelete, onClose, documentId, editor, emitComment, addToast, people = [] }: CommentThreadProps) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -38,6 +112,7 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
   const [replyText, setReplyText] = useState('');
   const [newComment, setNewComment] = useState('');
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [selPreview, setSelPreview] = useState('');
 
   // Deep link (?comment=): scroll to the thread and flash it.
   useEffect(() => {
@@ -54,12 +129,38 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
     return () => clearTimeout(t);
   }, [searchParams, comments]);
 
+  // Live selection preview for the composer ("commenting on …").
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      try {
+        const { from, to } = editor.state.selection;
+        setSelPreview(from !== to ? editor.state.doc.textBetween(from, to, ' ').slice(0, 70) : '');
+      } catch {
+        setSelPreview('');
+      }
+    };
+    update();
+    editor.on('selectionUpdate', update);
+    return () => { editor.off('selectionUpdate', update); };
+  }, [editor]);
+
   const getSelectionPosition = () => {
     if (!editor) return {};
     const { from, to } = editor.state.selection;
     if (from === to) return {};
     return { from, to };
   };
+
+  const jumpToPosition = (position: any) => {
+    if (!editor || typeof position?.from !== 'number') return;
+    try {
+      editor.chain().focus().setTextSelection({ from: position.from, to: position.to ?? position.from }).scrollIntoView().run();
+    } catch {}
+  };
+
+  const hasAnchor = (position: any) =>
+    position && typeof position.from === 'number' && typeof position.to === 'number' && position.from !== position.to;
 
   const handleAddComment = () => {
     if (!newComment.trim() || !documentId) return;
@@ -72,8 +173,11 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
     addToast?.('Comment added', 'success');
   };
 
-  const handleResolve = (id: string) => {
-    onResolve?.(id);
+  const submitReply = (commentId: string) => {
+    if (!replyText.trim()) return;
+    emitComment?.({ documentId, content: replyText.trim(), parentId: commentId });
+    setReplyText('');
+    setReplyTo(null);
   };
 
   const handleDelete = (id: string) => {
@@ -82,157 +186,199 @@ export function CommentThread({ comments, onResolve, onDelete, onClose, document
     }
   };
 
+  const openCount = comments.filter((c) => !c.resolved).length;
+
   return (
-    <div id="comment-thread" style={{ width: '320px', background: 'white', borderLeft: '1.5px solid #e7e5e4', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-      <div style={{ padding: '16px 18px', borderBottom: '1.5px solid #e7e5e4', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <MessageSquare size={16} color="#f97316" />
-        <h3 style={{ fontWeight: 600, fontSize: '14px' }}>Comments</h3>
-        <span style={{ fontSize: '12px', color: '#a8a29e', background: '#f5f5f4', padding: '2px 8px', borderRadius: '10px' }}>{comments.length}</span>
+    <div id="comment-thread" style={{ width: '320px', background: '#fdfbf7', borderLeft: '1.5px solid #e7e5e4', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <div style={{ padding: '14px 16px', borderBottom: '1.5px solid #e7e5e4', background: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: 28, height: 28, borderRadius: 10, background: '#fff7ed', border: '1.5px solid #fed7aa', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <MessageSquare size={14} color="#ea580c" />
+        </span>
+        <h3 style={{ fontWeight: 700, fontSize: '14px', letterSpacing: '-0.01em' }}>Comments</h3>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: openCount > 0 ? '#c2410c' : '#a8a29e', background: openCount > 0 ? '#fff7ed' : '#f5f5f4', border: openCount > 0 ? '1px solid #fed7aa' : '1px solid transparent', padding: '2px 9px', borderRadius: 999 }}>
+          {openCount > 0 ? `${openCount} open` : 'All resolved'}
+        </span>
         <div style={{ flex: 1 }} />
         {onClose && (
-          <button onClick={onClose} style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: '#a8a29e', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'} title="Close">
+          <button onClick={onClose} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer', color: '#a8a29e', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'} title="Close">
             <X size={16} />
           </button>
         )}
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-        {/* Add Comment Input */}
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '8px' }}>
-          <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', flexShrink: 0, marginTop: '2px' }}>
-            {session?.user?.name?.charAt(0) || '?'}
+      <div style={{ flex: 1, overflow: 'auto', padding: '14px 14px 20px' }}>
+        {/* Composer */}
+        <div style={{ marginBottom: '16px', background: 'white', border: '1.5px solid #e7e5e4', borderRadius: 14, padding: '10px 10px 8px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', flexShrink: 0, marginTop: '2px' }}>
+              {session?.user?.name?.charAt(0) || '?'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <MentionInput
+                value={newComment}
+                onChange={setNewComment}
+                onSubmit={handleAddComment}
+                people={people}
+                placeholder="Add a comment... (type @ to mention)"
+                style={{ padding: '8px 10px', fontSize: '13px', borderRadius: '10px', border: 'none', background: '#fafaf9' }}
+              />
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <MentionInput
-              value={newComment}
-              onChange={setNewComment}
-              onSubmit={handleAddComment}
-              people={people}
-              placeholder="Add a comment... (type @ to mention)"
-              style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: '8px', paddingLeft: '34px' }}>
+            <div style={{ flex: 1, minWidth: 0, fontSize: '11px', color: '#a8a29e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selPreview ? (
+                <span>On “{selPreview}{selPreview.length >= 70 ? '…' : ''}”</span>
+              ) : (
+                <span>Tip: select text first to anchor your comment</span>
+              )}
+            </div>
             {newComment.trim() && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                <button onClick={handleAddComment} className="btn btn-primary btn-sm" style={{ padding: '5px 12px', fontSize: '12px' }}>
-                  <Send size={12} style={{ marginRight: '4px' }} />
-                  Comment
-                </button>
-              </div>
+              <button onClick={handleAddComment} className="btn btn-primary btn-sm" style={{ padding: '5px 12px', fontSize: '12px', flexShrink: 0 }}>
+                <Send size={12} style={{ marginRight: '4px' }} />
+                Comment
+              </button>
             )}
           </div>
         </div>
 
-        {/* Comments List */}
+        {/* Threads */}
         {comments.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#a8a29e', fontSize: '13px', paddingTop: '20px' }}>No comments yet</p>
+          <div style={{ textAlign: 'center', padding: '36px 16px', background: 'white', border: '1.5px dashed #e7e5e4', borderRadius: 14 }}>
+            <span style={{ width: 44, height: 44, borderRadius: 14, background: '#fff7ed', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+              <MessageSquare size={20} color="#fed7aa" />
+            </span>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#57534e', marginBottom: 2 }}>No comments yet</p>
+            <p style={{ fontSize: '12px', color: '#a8a29e' }}>Discuss, ask questions, mention teammates with @.</p>
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {comments.map((comment) => (
-              <div
-                key={comment.id}
-                id={`comment-${comment.id}`}
-                style={{
-                  opacity: comment.resolved ? 0.6 : 1,
-                  background: flashId === comment.id ? '#fff7ed' : 'transparent',
-                  borderRadius: 10,
-                  padding: flashId === comment.id ? 8 : 0,
-                  transition: 'background 0.3s ease',
-                }}
-              >
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', flexShrink: 0 }}>
-                    {comment.user?.name?.charAt(0) || '?'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '12px' }}>{comment.user?.name || 'User'}</span>
-                      <span style={{ fontSize: '10px', color: '#d6d3d1' }}>
-                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                      </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {comments.map((comment) => {
+              const isMine = comment.userId === session?.user?.id;
+              const flashed = flashId === comment.id;
+              return (
+                <div
+                  key={comment.id}
+                  id={`comment-${comment.id}`}
+                  style={{
+                    background: 'white',
+                    border: flashed ? '1.5px solid #f97316' : '1.5px solid #e7e5e4',
+                    borderRadius: 14,
+                    padding: '11px 12px',
+                    opacity: comment.resolved ? 0.72 : 1,
+                    boxShadow: flashed ? '0 0 0 3px rgba(249,115,22,0.15)' : '0 1px 2px rgba(0,0,0,0.04)',
+                    transition: 'border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.2s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '9px' }}>
+                    <div className="avatar avatar-sm" style={{ background: '#fed7aa', color: '#c2410c', flexShrink: 0 }}>
+                      {comment.user?.name?.charAt(0) || '?'}
                     </div>
-                    <p style={{ fontSize: '13px', color: '#44403c', marginBottom: '6px', lineHeight: 1.5, textDecoration: comment.resolved ? 'line-through' : 'none' }}>
-                      {comment.content}
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#a8a29e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Reply size={11} /> Reply
-                      </button>
-                      {!comment.resolved && (
-                        <button onClick={() => handleResolve(comment.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Check size={11} /> Resolve
-                        </button>
-                      )}
-                      {comment.userId === session?.user?.id && (
-                        <button onClick={() => handleDelete(comment.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Trash2 size={11} /> Delete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reply Input */}
-                {replyTo === comment.id && (
-                  <div style={{ marginTop: '8px', marginLeft: '34px', display: 'flex', gap: '6px' }}>
-                    <MentionInput
-                      value={replyText}
-                      onChange={setReplyText}
-                      onSubmit={() => {
-                        if (!replyText.trim()) return;
-                        emitComment?.({
-                          documentId,
-                          content: replyText.trim(),
-                          parentId: comment.id,
-                        });
-                        setReplyText('');
-                        setReplyTo(null);
-                      }}
-                      people={people}
-                      placeholder="Write a reply... (type @ to mention)"
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '8px' }}
-                    />
-                    <button onClick={() => {
-                      if (!replyText.trim()) return;
-                      emitComment?.({
-                        documentId,
-                        content: replyText.trim(),
-                        parentId: comment.id,
-                      });
-                      setReplyText('');
-                      setReplyTo(null);
-                    }} className="btn btn-primary btn-sm" style={{ padding: '5px 8px', fontSize: '11px' }}>Reply</button>
-                  </div>
-                )}
-
-                {/* Nested Replies */}
-                {comment.replies && comment.replies.length > 0 && (
-                  <div style={{ marginTop: '8px', marginLeft: '34px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {comment.replies.map((reply) => (
-                      <div
-                        key={reply.id}
-                        id={`comment-${reply.id}`}
-                        style={{
-                          display: 'flex',
-                          gap: '8px',
-                          background: flashId === reply.id ? '#fff7ed' : 'transparent',
-                          borderRadius: 8,
-                          padding: flashId === reply.id ? 6 : 0,
-                          transition: 'background 0.3s ease',
-                        }}
-                      >
-                        <div className="avatar avatar-sm" style={{ background: '#d6d3d1', color: '#78716c', width: '22px', height: '22px', fontSize: '10px' }}>
-                          {reply.user?.name?.charAt(0) || '?'}
-                        </div>
-                        <div>
-                          <span style={{ fontWeight: 600, fontSize: '11px' }}>{reply.user?.name}</span>
-                          <p style={{ fontSize: '12px', color: '#44403c' }}>{reply.content}</p>
-                        </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, fontSize: '12px', color: '#1c1917' }}>{comment.user?.name || 'User'}</span>
+                        {isMine && (
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#c2410c', background: '#fff7ed', borderRadius: 999, padding: '1px 7px' }}>you</span>
+                        )}
+                        {comment.resolved && (
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '1px 7px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                            <BadgeCheck size={10} /> Resolved
+                          </span>
+                        )}
+                        <span style={{ fontSize: '10px', color: '#a8a29e', marginLeft: 'auto', flexShrink: 0 }}>
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                        </span>
                       </div>
-                    ))}
+                      <p style={{ fontSize: '13px', color: '#44403c', margin: '0 0 4px', lineHeight: 1.55 }}>
+                        {renderRichText(comment.content, people)}
+                      </p>
+                      {hasAnchor(comment.position) && (
+                        <button
+                          onClick={() => jumpToPosition(comment.position)}
+                          title="Jump to the commented text"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '11px', fontWeight: 600, color: '#0369a1', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 999, padding: '2px 9px', cursor: 'pointer', marginBottom: 4 }}
+                        >
+                          <LocateFixed size={11} /> On selection
+                        </button>
+                      )}
+                      <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
+                        {actionBtn(
+                          () => setReplyTo(replyTo === comment.id ? null : comment.id),
+                          replyTo === comment.id ? '#f97316' : '#a8a29e',
+                          <Reply size={11} />,
+                          comment.replies?.length ? `Reply (${comment.replies.length})` : 'Reply'
+                        )}
+                        {comment.resolved
+                          ? actionBtn(() => onResolve?.(comment.id), '#b45309', <RotateCcw size={11} />, 'Reopen')
+                          : actionBtn(() => onResolve?.(comment.id), '#16a34a', <Check size={11} />, 'Resolve')}
+                        {isMine && actionBtn(() => handleDelete(comment.id), '#ef4444', <Trash2 size={11} />, 'Delete')}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Reply Input */}
+                  {replyTo === comment.id && (
+                    <div style={{ marginTop: '10px', display: 'flex', gap: '6px', background: '#fafaf9', border: '1.5px dashed #e7e5e4', borderRadius: 10, padding: 6 }}>
+                      <MentionInput
+                        value={replyText}
+                        onChange={setReplyText}
+                        onSubmit={() => submitReply(comment.id)}
+                        people={people}
+                        placeholder="Write a reply... (type @ to mention)"
+                        style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '8px' }}
+                      />
+                      <button onClick={() => submitReply(comment.id)} className="btn btn-primary btn-sm" style={{ padding: '5px 10px', fontSize: '11px', flexShrink: 0, alignSelf: 'flex-end' }}>Reply</button>
+                    </div>
+                  )}
+
+                  {/* Nested Replies */}
+                  {comment.replies && comment.replies.length > 0 && (
+                    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '2px solid #fed7aa', paddingLeft: '10px', marginLeft: '6px' }}>
+                      {comment.replies.map((reply) => {
+                        const replyMine = reply.userId === session?.user?.id;
+                        return (
+                          <div
+                            key={reply.id}
+                            id={`comment-${reply.id}`}
+                            style={{
+                              display: 'flex',
+                              gap: '8px',
+                              background: flashId === reply.id ? '#fff7ed' : '#fafaf9',
+                              border: flashId === reply.id ? '1.5px solid #f97316' : '1px solid transparent',
+                              borderRadius: 10,
+                              padding: '7px 9px',
+                              transition: 'background 0.3s ease, border-color 0.3s ease',
+                            }}
+                          >
+                            <div className="avatar avatar-sm" style={{ background: '#e7e5e4', color: '#78716c', width: '22px', height: '22px', fontSize: '10px', flexShrink: 0 }}>
+                              {reply.user?.name?.charAt(0) || '?'}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 700, fontSize: '11px', color: '#1c1917' }}>{reply.user?.name}</span>
+                                {replyMine && (
+                                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#c2410c', background: '#fff7ed', borderRadius: 999, padding: '0 6px' }}>you</span>
+                                )}
+                                <span style={{ fontSize: '10px', color: '#a8a29e', marginLeft: 'auto' }}>
+                                  {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
+                                </span>
+                                {replyMine && (
+                                  <button onClick={() => handleDelete(reply.id)} title="Delete reply" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d6d3d1', padding: 2, display: 'inline-flex', borderRadius: 6 }}>
+                                    <Trash2 size={11} />
+                                  </button>
+                                )}
+                              </div>
+                              <p style={{ fontSize: '12px', color: '#44403c', margin: '2px 0 0', lineHeight: 1.5 }}>
+                                {renderRichText(reply.content, people)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
