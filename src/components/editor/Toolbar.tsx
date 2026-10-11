@@ -111,12 +111,13 @@ function DropdownPicker({ value, onChange, options, title, fallback }: DropdownP
               style={{
                 display: 'block', width: '100%', textAlign: 'left', fontSize: '13px',
                 padding: '6px 10px', border: 'none', background: value === '' ? '#fff7ed' : 'none',
-                color: '#78716c', cursor: 'pointer', borderRadius: '6px',
+                color: value === '' ? '#c2410c' : '#78716c', cursor: 'pointer', borderRadius: '6px',
+                fontWeight: value === '' ? 600 : 400,
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f4'}
               onMouseLeave={(e) => e.currentTarget.style.background = value === '' ? '#fff7ed' : 'none'}
             >
-              {title}
+              Default{fallback ? ` (${fallback})` : ''}
             </button>
             {options.map((o) => (
               <button

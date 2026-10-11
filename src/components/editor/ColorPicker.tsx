@@ -38,14 +38,15 @@ export function ColorPicker({ currentColor, onColorChange, onRemoveColor }: Colo
   const openPopover = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
+      // border-box: declared width INCLUDES padding+border, so the clamp math holds.
+      const popoverWidth = 192;
       let left = rect.left;
-      const popoverWidth = 184;
       if (left + popoverWidth > window.innerWidth - 8) {
-        left = window.innerWidth - popoverWidth - 8;
+        left = Math.max(8, window.innerWidth - popoverWidth - 8);
       }
       setPopoverStyle({
         position: 'fixed',
-        top: rect.bottom + 4,
+        top: Math.min(rect.bottom + 4, Math.max(8, window.innerHeight - 280)),
         left,
         zIndex: 30,
         background: 'white',
@@ -53,10 +54,14 @@ export function ColorPicker({ currentColor, onColorChange, onRemoveColor }: Colo
         borderRadius: '12px',
         boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
         padding: '8px',
-        width: '184px',
+        width: popoverWidth + 'px',
+        maxWidth: 'calc(100vw - 16px)',
+        maxHeight: 'calc(100vh - 120px)',
+        overflowY: 'auto',
+        boxSizing: 'border-box',
         display: 'grid',
         gridTemplateColumns: 'repeat(6, 1fr)',
-        gap: '3px',
+        gap: '4px',
       });
     }
     setOpen(true);
