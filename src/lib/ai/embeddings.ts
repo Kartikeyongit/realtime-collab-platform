@@ -93,6 +93,25 @@ async function embedWith(
   return out;
 }
 
+/** Describe exactly what's wrong with a batch of vectors (null = healthy). */
+export function describeEmbeddingProblem(vecs: unknown, expectedCount: number): string | null {
+  if (!Array.isArray(vecs)) return `engine returned ${typeof vecs} instead of an array`;
+  if (vecs.length !== expectedCount) {
+    return `engine returned ${vecs.length} vectors for ${expectedCount} texts`;
+  }
+  for (let k = 0; k < vecs.length; k++) {
+    const v = vecs[k] as unknown;
+    if (!Array.isArray(v)) return `vector ${k} is ${typeof v}, not an array`;
+    if (v.length !== EMBED_DIMS) return `vector ${k} has ${v.length} dims, expected ${EMBED_DIMS}`;
+    for (let j = 0; j < v.length; j++) {
+      if (typeof v[j] !== 'number' || !Number.isFinite(v[j] as number)) {
+        return `vector ${k} has non-finite value at position ${j}`;
+      }
+    }
+  }
+  return null;
+}
+
 /** Embed with engine-load progress folded into one callback (0..100). */
 export async function embedTextsWithLoadProgress(
   texts: string[],

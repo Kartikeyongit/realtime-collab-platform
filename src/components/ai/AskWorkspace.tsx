@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { X, Send, Loader2, Sparkles, Database, FileText, AlertTriangle } from 'lucide-react';
 import { docToChunks } from '@/lib/ai/chunks';
-import { embedTextsWithLoadProgress } from '@/lib/ai/embeddings';
+import { embedTextsWithLoadProgress, describeEmbeddingProblem } from '@/lib/ai/embeddings';
 import { showError } from '@/lib/toast';
 
 interface Citation {
@@ -57,6 +57,10 @@ async function indexAllDocs(
         );
       }
     );
+    const problem = describeEmbeddingProblem(vecs, chunks.length);
+    if (problem) {
+      throw new Error(`Doc ${i + 1}/${docs.length}: bad engine output (${problem})`);
+    }
     await axios.post('/api/ai/index', {
       documentId: docs[i].id,
       chunks: chunks.map((c, k) => ({ index: c.index, text: c.text, embedding: vecs[k] })),
@@ -170,7 +174,10 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setAsking(true);
     try {
-      const [vec] = await embedTextsWithLoadProgress([q]);
+      const vecs = await embedTextsWithLoadProgress([q]);
+      const problem = describeEmbeddingProblem(vecs, 1);
+      if (problem) throw new Error(`Engine output unusable (${problem})`);
+      const [vec] = vecs;
       const { data } = await axios.post('/api/ai/ask', { question: q, embedding: vec });
       if (data.needsIndex) {
         setMessages((m) => [...m, { role: 'ai', text: 'Your workspace memory is empty — index it first (button above), then ask away.' }]);
