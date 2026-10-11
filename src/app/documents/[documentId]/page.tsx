@@ -222,8 +222,9 @@ export default function DocumentPage() {
           <div className="hide-mobile" style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
           <button onClick={() => setShowComments(!showComments)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Comments"><MessageSquare size={15} /></button>
           <button onClick={() => setShowShare(true)} className="btn btn-ghost btn-sm" style={{ padding: '5px 6px' }} title="Share"><Share2 size={15} /></button>
-          <div className="hide-mobile" style={{ width: '1px', height: '18px', background: '#e7e5e4', margin: '0 4px' }} />
-          <div style={{ position: 'relative' }}>
+          <button onClick={handleDuplicate} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px' }} title="Duplicate"><Copy size={15} /></button>
+          <button onClick={() => setShowDeleteDialog(true)} className="btn btn-ghost btn-sm hide-mobile" style={{ padding: '5px 6px', color: '#ef4444' }} title="Delete"><Trash2 size={15} /></button>
+          <div className="show-mobile" style={{ position: 'relative' }}>
             <button onClick={() => setShowMenu(!showMenu)} className="btn btn-ghost btn-sm" style={{ padding: '5px 4px' }} title="More"><MoreHorizontal size={15} /></button>
             {showMenu && (
               <>
@@ -232,7 +233,6 @@ export default function DocumentPage() {
                   <button onClick={() => { setShowSearch(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Search size={15} /> Find & Replace</button>
                   <button onClick={() => { setShowAI(true); setShowMenu(false); }} className="dropdown-item show-mobile"><Sparkles size={15} /> AI Assistant</button>
                   <button onClick={() => { setShowComments(true); setShowMenu(false); }} className="dropdown-item show-mobile"><MessageSquare size={15} /> Comments</button>
-                  <button onClick={() => { setShowHistory(true); setShowMenu(false); }} className="dropdown-item"><Clock size={15} /> History</button>
                   <div className="dropdown-divider show-mobile" />
                   <button onClick={() => { handleDuplicate(); setShowMenu(false); }} className="dropdown-item"><Copy size={15} /> Duplicate</button>
                   <div className="dropdown-divider" />

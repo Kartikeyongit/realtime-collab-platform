@@ -58,6 +58,15 @@ export function MentionInput({
 
   const dropdownOpen = open && matches.length > 0;
 
+  // Flip above only when there isn't room below: the panel above the composer
+  // is clipped by an overflow-hidden ancestor, so upward popups hide behind chrome.
+  const flipUp = (() => {
+    const el = inputRef.current;
+    if (!el || typeof window === 'undefined') return false;
+    const rect = el.getBoundingClientRect();
+    return window.innerHeight - rect.bottom < 240 && rect.top > 240;
+  })();
+
   const pick = (name: string) => {
     const el = inputRef.current;
     const t = caretToken();
@@ -121,10 +130,14 @@ export function MentionInput({
         <div
           style={{
             position: 'absolute',
-            bottom: 'calc(100% + 6px)',
+            ...(flipUp
+              ? { bottom: 'calc(100% + 6px)' }
+              : { top: 'calc(100% + 6px)' }),
             left: 0,
             minWidth: 190,
             maxWidth: 250,
+            maxHeight: 220,
+            overflowY: 'auto',
             background: 'white',
             border: '1.5px solid #e7e5e4',
             borderRadius: 12,
