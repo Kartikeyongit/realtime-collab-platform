@@ -98,10 +98,11 @@ export function ColorPicker({ currentColor, onColorChange, onRemoveColor }: Colo
             {COLORS.map(c => (
               <button
                 key={c} onClick={() => { onColorChange(c); setOpen(false); }}
+                title={c}
                 style={{
-                  width: '26px', height: '26px', borderRadius: '6px', border: c === '#FFFFFF' ? '1.5px solid #e7e5e4' : 'none',
+                  width: '100%', aspectRatio: '1', borderRadius: '6px', border: c === '#FFFFFF' ? '1.5px solid #e7e5e4' : 'none',
                   background: c, cursor: 'pointer', outline: currentColor === c ? '2px solid #f97316' : 'none',
-                  outlineOffset: '1px',
+                  outlineOffset: '1px', padding: 0,
                 }}
               />
             ))}

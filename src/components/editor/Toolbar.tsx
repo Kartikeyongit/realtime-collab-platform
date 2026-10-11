@@ -33,13 +33,16 @@ interface DropdownProps {
   onChange: (value: string) => void;
   options: string[];
   title: string;
+  /** Shown when no explicit attribute is set (the document default). */
+  fallback?: string;
 }
 
-function DropdownPicker({ value, onChange, options, title }: DropdownProps) {
+function DropdownPicker({ value, onChange, options, title, fallback }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ display: 'none' });
+  const shown = value || fallback || title;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -92,10 +95,10 @@ function DropdownPicker({ value, onChange, options, title }: DropdownProps) {
         }}
         onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = '#f5f5f4'; }}
         onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
-        title={title}
+        title={shown}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {value || title}
+          {shown}
         </span>
         <ChevronDown size={12} style={{ flexShrink: 0 }} />
       </button>
@@ -294,8 +297,10 @@ export function Toolbar({ editor }: ToolbarProps) {
       setFontFamily(editor.getAttributes('textStyle')?.fontFamily || '');
       setFontSize(editor.getAttributes('fontSize')?.size || '');
     };
+    update();
     editor.on('selectionUpdate', update);
-    return () => { editor.off('selectionUpdate', update); };
+    editor.on('update', update);
+    return () => { editor.off('selectionUpdate', update); editor.off('update', update); };
   }, [editor]);
 
   useEffect(() => {
@@ -407,8 +412,8 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
         <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
-        <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
-        <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
+        <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" fallback="Inter" />
+        <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" fallback="16" />
         <ColorPicker
           currentColor={editor.getAttributes('textStyle').color}
           onColorChange={(c) => editor.chain().focus().setColor(c).run()}
