@@ -20,6 +20,7 @@ import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { CustomTable, CustomTableRow, CustomTableCell, CustomTableHeader } from './extensions/tableExtensions';
 import { FontSize } from './extensions/FontSize';
+import { EmojiSuggestion } from './extensions/EmojiSuggestion';
 import { Toolbar } from './Toolbar';
 import { useYjsCollaboration } from '@/hooks/useYjsCollaboration';
 import axios from 'axios';
@@ -151,6 +152,7 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         TaskItem.configure({ nested: true }),
         Subscript,
         Superscript,
+        EmojiSuggestion,
         Collaboration.configure({ document: yDoc }),
         CollaborationCursor.configure({
           provider: cursorProvider,
