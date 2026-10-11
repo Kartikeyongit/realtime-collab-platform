@@ -376,6 +376,66 @@ body {
   margin: 4px 0;
 }
 
+/* Task lists (TipTap taskList/taskItem): no bullets, custom warm checkboxes */
+.ProseMirror ul[data-type='taskList'] {
+  list-style: none !important;
+  padding-left: 2px !important;
+  margin: 10px 0;
+}
+.ProseMirror ul[data-type='taskList'] li[data-type='taskItem'] {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 7px 0;
+}
+.ProseMirror ul[data-type='taskList'] li[data-type='taskItem']::marker {
+  content: none !important;
+}
+.ProseMirror ul[data-type='taskList'] li > label {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  cursor: pointer;
+}
+.ProseMirror ul[data-type='taskList'] li > label > input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-radius: 6px;
+  border: 1.5px solid #d6d3d1;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ProseMirror ul[data-type='taskList'] li > label > input[type='checkbox']:hover {
+  border-color: #f97316;
+}
+.ProseMirror ul[data-type='taskList'] li > label > input[type='checkbox']:checked {
+  background: #f97316;
+  border-color: #f97316;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.ProseMirror ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.ProseMirror ul[data-type='taskList'] li > div > p {
+  margin: 0;
+}
+.ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: #a8a29e;
+  text-decoration: line-through;
+  text-decoration-color: #d6d3d1;
+}
+
 .ProseMirror code {
   background: #fff7ed;
   padding: 3px 8px;
