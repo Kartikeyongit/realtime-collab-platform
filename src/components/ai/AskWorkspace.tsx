@@ -228,7 +228,7 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '7vh', paddingLeft: 12, paddingRight: 12 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}
       onClick={onClose}
     >
       <div

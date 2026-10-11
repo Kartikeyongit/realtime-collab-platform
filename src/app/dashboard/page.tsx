@@ -7,6 +7,7 @@ import axios from 'axios';
 import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X } from 'lucide-react';
 import { showSuccess, showError, showWarning } from '@/lib/toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
+import { ConfirmDialog } from '@/components/ui/Dialog';
 import { AskWorkspace } from '@/components/ai/AskWorkspace';
 import { FilterSelect } from '@/components/ui/FilterSelect';
 import { WeekStrip } from '@/components/documents/WeekStrip';
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const [total, setTotal] = useState(0);
   const [newFolder, setNewFolder] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [folderTarget, setFolderTarget] = useState<{ id: string; name: string } | null>(null);
   const [askOpen, setAskOpen] = useState(false);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const quickNoteRef = useRef<() => void>(() => {});
@@ -165,9 +167,9 @@ export default function DashboardPage() {
     } catch { showError('Failed to create folder'); }
   };
 
-  const deleteFolder = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('Delete this folder? Documents inside will be kept (moved to No folder).')) return;
+  const deleteFolder = async () => {
+    if (!folderTarget) return;
+    const { id } = folderTarget;
     try {
       await axios.delete(`/api/folders/${id}`);
       setFolders((p) => p.filter((f) => f.id !== id));
@@ -175,6 +177,7 @@ export default function DashboardPage() {
       fetchDocuments();
       showSuccess('Folder deleted');
     } catch { showError('Failed to delete folder'); }
+    finally { setFolderTarget(null); }
   };
 
   const toggleFav = async (doc: DocItem, e: React.MouseEvent) => {
@@ -304,7 +307,7 @@ export default function DashboardPage() {
                   <button onClick={() => { setFolderFilter(active ? '' : f.id); setPage(1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, color: 'inherit', fontSize: 13 }}>
                     <FolderIcon size={14} /> {f.name} {typeof f._count?.documents === 'number' && <span style={{ color: '#a8a29e' }}>({f._count.documents})</span>}
                   </button>
-                  <button onClick={(e) => deleteFolder(f.id, e)} title={`Delete ${f.name}`} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#d6d3d1', display: 'inline-flex', padding: 4, borderRadius: 999 }}>
+                  <button onClick={(e) => { e.stopPropagation(); setFolderTarget({ id: f.id, name: f.name }); }} title={`Delete ${f.name}`} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#d6d3d1', display: 'inline-flex', padding: 4, borderRadius: 999 }}>
                     <Trash2 size={13} />
                   </button>
                 </span>
@@ -386,6 +389,15 @@ export default function DashboardPage() {
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} folders={folders} onNavigate={(id) => router.push(`/documents/${id}`)} onAsk={() => setAskOpen(true)} />
       <AskWorkspace open={askOpen} onClose={() => setAskOpen(false)} />
+      <ConfirmDialog
+        isOpen={!!folderTarget}
+        onClose={() => setFolderTarget(null)}
+        onConfirm={deleteFolder}
+        title="Delete folder?"
+        description={folderTarget ? `"${folderTarget.name}" will be deleted. Documents inside will be kept (moved to No folder).` : ''}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 }
