@@ -11,7 +11,7 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Minus, Table, CheckSquare,
   Subscript, Superscript, RemoveFormatting,
-  Indent, Outdent, Focus, Columns, Rows, Trash2,
+  Indent, Outdent, Focus,
   ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
@@ -143,6 +143,145 @@ interface ToolbarProps {
   editor: Editor | null;
 }
 
+const GRID_MAX = 8;
+
+function TableMenu({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState({ r: 3, c: 3 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ display: 'none' });
+  const inTable = editor.isActive('table');
+
+  const openPopover = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPopoverStyle({
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - 260)),
+        zIndex: 30,
+        background: 'white',
+        border: '1.5px solid #e7e5e4',
+        borderRadius: '16px',
+        boxShadow: '0 16px 40px rgba(28,25,23,0.12)',
+        padding: '12px',
+        width: '236px',
+      });
+    }
+    setHover({ r: 3, c: 3 });
+    setOpen(true);
+  };
+
+  const insertAt = (r: number, c: number) => {
+    editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: true }).run();
+    setOpen(false);
+  };
+
+  const structBtn = (label: string, danger: boolean, action: () => void) => (
+    <button
+      key={label}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={action}
+      onMouseEnter={(e) => { e.currentTarget.style.background = danger ? '#fef2f2' : '#fff7ed'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      style={{
+        display: 'block', width: '100%', textAlign: 'left', fontSize: '13px',
+        padding: '7px 10px', border: 'none', background: 'transparent',
+        color: danger ? '#dc2626' : '#44403c', cursor: 'pointer', borderRadius: '8px',
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  const run = (fn: () => void) => () => { fn(); };
+
+  return (
+    <div style={{ display: 'inline-flex', position: 'static' }}>
+      <button
+        ref={triggerRef}
+        onClick={() => (open ? setOpen(false) : openPopover())}
+        onMouseDown={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
+        style={{
+          padding: '6px 7px', border: 'none', background: open || inTable ? '#fff7ed' : 'transparent',
+          color: open || inTable ? '#f97316' : '#78716c',
+          borderRadius: '8px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '14px', flexShrink: 0, outline: 'none',
+        }}
+        onMouseEnter={(e) => { if (!open && !inTable) e.currentTarget.style.background = '#f5f5f4'; }}
+        onMouseLeave={(e) => { if (!open && !inTable) e.currentTarget.style.background = 'transparent'; }}
+        title={inTable ? 'Table options' : 'Insert table'}
+      >
+        <Table size={16} />
+      </button>
+      {open && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 20 }} onClick={() => setOpen(false)} />
+          <div style={popoverStyle}>
+            {!inTable ? (
+              <>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  Insert table
+                </div>
+                <div
+                  style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_MAX}, 1fr)`, gap: 3, marginBottom: 8 }}
+                  onMouseLeave={() => setHover({ r: 0, c: 0 })}
+                >
+                  {Array.from({ length: GRID_MAX * GRID_MAX }, (_, i) => {
+                    const r = Math.floor(i / GRID_MAX) + 1;
+                    const c = (i % GRID_MAX) + 1;
+                    const lit = r <= hover.r && c <= hover.c;
+                    return (
+                      <div
+                        key={i}
+                        onMouseEnter={() => setHover({ r, c })}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertAt(r, c)}
+                        style={{
+                          aspectRatio: '1',
+                          borderRadius: 4,
+                          border: '1.5px solid',
+                          borderColor: lit ? '#f97316' : '#e7e5e4',
+                          background: lit ? '#ffedd5' : '#fafaf9',
+                          cursor: 'pointer',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: '13px', color: '#44403c', textAlign: 'center' }}>
+                  {hover.r > 0 ? `${hover.r} × ${hover.c} table` : 'Hover to choose size'}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                  Row
+                </div>
+                {structBtn('Add row above', false, run(() => editor.chain().focus().addRowBefore().run()))}
+                {structBtn('Add row below', false, run(() => editor.chain().focus().addRowAfter().run()))}
+                {structBtn('Delete row', true, run(() => editor.chain().focus().deleteRow().run()))}
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 4px' }}>
+                  Column
+                </div>
+                {structBtn('Add column left', false, run(() => editor.chain().focus().addColumnBefore().run()))}
+                {structBtn('Add column right', false, run(() => editor.chain().focus().addColumnAfter().run()))}
+                {structBtn('Delete column', true, run(() => editor.chain().focus().deleteColumn().run()))}
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 4px' }}>
+                  Table
+                </div>
+                {structBtn('Toggle header row', false, run(() => editor.chain().focus().toggleHeaderRow().run()))}
+                {structBtn('Delete table', true, run(() => { editor.chain().focus().deleteTable().run(); setOpen(false); }))}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Toolbar({ editor }: ToolbarProps) {
   const [focusMode, setFocusMode] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -197,16 +336,6 @@ export function Toolbar({ editor }: ToolbarProps) {
     e.target.value = '';
   }, [editor]);
 
-  const isTable = editor.isActive('table');
-  const tableTools = [
-    { icon: Columns, action: () => editor.chain().focus().addColumnAfter().run(), title: 'Add column after' },
-    { icon: Columns, action: () => editor.chain().focus().addColumnBefore().run(), title: 'Add column before' },
-    { icon: Rows, action: () => editor.chain().focus().addRowAfter().run(), title: 'Add row after' },
-    { icon: Rows, action: () => editor.chain().focus().addRowBefore().run(), title: 'Add row before' },
-    { icon: Trash2, action: () => editor.chain().focus().deleteColumn().run(), title: 'Delete column' },
-    { icon: Trash2, action: () => editor.chain().focus().deleteRow().run(), title: 'Delete row' },
-  ];
-
   interface ToolButtonProps {
     icon: LucideIcon;
     action: () => void;
@@ -236,21 +365,6 @@ export function Toolbar({ editor }: ToolbarProps) {
   );
 
   const Divider = () => <div style={{ width: '1px', height: '20px', background: '#e7e5e4', margin: '0 3px', flexShrink: 0 }} />;
-
-  const tableGroup = (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0px',
-      overflow: 'hidden', whiteSpace: 'nowrap',
-      maxWidth: isTable ? '250px' : '0px',
-      opacity: isTable ? 1 : 0,
-      transition: 'all 0.2s ease',
-    }}>
-      {tableTools.map((t, i) => (
-        <ToolButton key={`tt-${i}`} icon={t.icon} action={t.action} active={() => false} title={t.title} />
-      ))}
-      <Divider />
-    </div>
-  );
 
   return (
     <div className="toolbar-scroll toolbar-strip" style={{
@@ -288,13 +402,12 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolButton icon={Quote} action={() => editor.chain().focus().toggleBlockquote().run()} active={() => editor.isActive('blockquote')} title="Quote" />
       <Divider />
       {/* Insert group */}
-      <ToolButton icon={Table} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={() => editor.isActive('table')} title="Table" />
+      <TableMenu editor={editor} />
       <ToolButton icon={Image} action={() => imageInputRef.current?.click()} active={() => false} title="Insert image (max 2MB)" />
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
       <ToolButton icon={Link} action={() => { const url = prompt('Link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} active={() => editor.isActive('link')} title="Link" />
         <ToolButton icon={Minus} action={() => editor.chain().focus().setHorizontalRule().run()} active={() => false} title="Horizontal rule" />
       <Divider />
-        {tableGroup}
         <DropdownPicker value={fontFamily} onChange={(v: string) => { setFontFamily(v); if (v) editor.chain().focus().setFontFamily(v).run(); else editor.chain().focus().unsetFontFamily().run(); }} options={FONT_FAMILIES} title="Font" />
         <DropdownPicker value={fontSize} onChange={(v: string) => { setFontSize(v); if (v) editor.chain().focus().setFontSize(v).run(); else editor.chain().focus().unsetFontSize().run(); }} options={FONT_SIZES} title="Size" />
         <ColorPicker
