@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       systemPrompt = `You are a writing assistant. The user gives you this instruction: "${customPrompt}". Apply it to their text below. Return only the modified text.`;
     }
 
-    const model = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
+    const model = process.env.AI_MODEL || 'openai/gpt-oss-120b';
 
     const stream = await client.chat.completions.create({
       model,

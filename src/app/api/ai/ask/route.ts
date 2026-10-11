@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     }
 
     const client = new OpenAI({ apiKey, baseURL: process.env.AI_BASE_URL || 'https://api.groq.com/openai/v1' });
-    const model = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
+    const model = process.env.AI_MODEL || 'openai/gpt-oss-120b';
     const completion = await client.chat.completions.create({
       model,
       messages: [
