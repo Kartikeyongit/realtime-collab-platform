@@ -255,12 +255,25 @@ export function AskWorkspace({ open, onClose }: { open: boolean; onClose: () => 
             </button>
           </div>
 
-          {!statusLoading && status && status.indexedDocs === 0 && (
+          {!statusLoading && status && (
             <div style={{ marginTop: 12 }}>
               {!indexing ? (
-                <button className="btn btn-primary btn-sm" onClick={startIndexing} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Database size={14} /> Index {status.totalDocs} document{status.totalDocs === 1 ? '' : 's'} (one-time, on-device)
-                </button>
+                status.indexedDocs === 0 ? (
+                  <button className="btn btn-primary btn-sm" onClick={startIndexing} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Database size={14} /> Index {status.totalDocs} document{status.totalDocs === 1 ? '' : 's'} (one-time, on-device)
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <button className="btn btn-secondary btn-sm" onClick={startIndexing} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Database size={13} /> Re-index workspace
+                    </button>
+                    {status.indexedDocs < status.totalDocs && (
+                      <span style={{ fontSize: 12, color: '#b45309' }}>
+                        {status.totalDocs - status.indexedDocs} doc{status.totalDocs - status.indexedDocs === 1 ? '' : 's'} still unindexed
+                      </span>
+                    )}
+                  </div>
+                )
               ) : (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#78716c', marginBottom: 4 }}>
