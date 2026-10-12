@@ -60,6 +60,16 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
     };
   }, [measure]);
 
+  // While the tour is open, page-level focus outlines are suppressed entirely
+  // (they draw a second sharp ring inside the spotlight). Tour-card controls
+  // keep their own outlines via CSS below.
+  useEffect(() => {
+    document.body.classList.add('tour-open');
+    return () => {
+      document.body.classList.remove('tour-open');
+    };
+  }, []);
+
   // A focused target shows the global :focus-visible outline *inside* the
   // spotlight ring (double-outline clash). Drop focus only when it sits on
   // the highlighted element itself — tour-card keyboard focus is untouched.
@@ -169,7 +179,7 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
         />
       )}
       <div
-        className="card"
+        className="card tour-card"
         style={{
           padding: '18px 20px',
           animation: 'tourFade 0.18s ease',

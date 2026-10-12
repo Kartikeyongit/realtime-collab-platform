@@ -718,6 +718,16 @@ html {
   border-radius: 4px;
 }
 
+/* Guided tour: no page-level focus rings inside the spotlight (double-ring
+   clash). Tour-card controls keep theirs for keyboard users. */
+body.tour-open *:focus {
+  outline: none !important;
+}
+body.tour-open .tour-card :focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+
 /* Print styles */
 @media print {
   nav, header, .toolbar, button {
