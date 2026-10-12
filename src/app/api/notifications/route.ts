@@ -14,14 +14,21 @@ function shape(n: {
   commentId: string | null;
   actor: { id: string; name: string | null; image: string | null } | null;
   document: { id: string; title: string } | null;
-  comment: { content: string } | null;
+  comment: {
+    content: string;
+    user: { id: string; name: string | null; image: string | null };
+    document: { id: string; title: string };
+  } | null;
 }) {
+  // Legacy rows (pre-rebuild) lack actor/document — resolve via the comment.
+  const actor = n.actor ?? n.comment?.user ?? null;
+  const document = n.document ?? n.comment?.document ?? null;
   return {
     id: n.id,
     type: n.type || 'comment',
-    actor: n.actor ? { id: n.actor.id, name: n.actor.name, image: n.actor.image } : null,
-    documentId: n.document?.id ?? null,
-    documentTitle: n.document?.title ?? null,
+    actor: actor ? { id: actor.id, name: actor.name, image: actor.image } : null,
+    documentId: document?.id ?? null,
+    documentTitle: document?.title ?? null,
     commentId: n.commentId,
     excerpt: n.comment ? n.comment.content.slice(0, 120) : null,
     read: n.read,
@@ -53,7 +60,13 @@ export async function GET(request: Request) {
     include: {
       actor: { select: { id: true, name: true, image: true } },
       document: { select: { id: true, title: true } },
-      comment: { select: { content: true } },
+      comment: {
+        select: {
+          content: true,
+          user: { select: { id: true, name: true, image: true } },
+          document: { select: { id: true, title: true } },
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
     take: PAGE_SIZE + 1,
