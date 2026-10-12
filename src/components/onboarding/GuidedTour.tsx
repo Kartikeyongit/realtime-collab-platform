@@ -14,7 +14,7 @@ interface Rect {
   height: number;
 }
 
-const PAD = 6;
+const PAD = 4;
 
 /**
  * Spotlight tour overlay.
@@ -179,7 +179,7 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
               left: rect.left - PAD,
               width: rect.width + PAD * 2,
               height: rect.height + PAD * 2,
-              borderRadius: 12,
+              borderRadius: 8,
               border: '2.5px solid #f97316',
               pointerEvents: 'none',
             }}
