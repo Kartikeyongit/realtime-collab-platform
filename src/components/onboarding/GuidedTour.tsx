@@ -165,8 +165,8 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
               left: rect.left - PAD,
               width: rect.width + PAD * 2,
               height: rect.height + PAD * 2,
-              borderRadius: 14,
-              boxShadow: '0 0 0 2.5px #f97316, 0 0 0 6px rgba(249,115,22,0.25)',
+              borderRadius: 12,
+              border: '2.5px solid #f97316',
               pointerEvents: 'none',
               transition: 'all 0.25s ease',
             }}
