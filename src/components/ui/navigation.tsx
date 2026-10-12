@@ -187,28 +187,26 @@ export function Navigation() {  const { data: session } = useSession();
 
 function InstallMenuItem({ onDone }: { onDone: () => void }) {
   const { canInstall, isIos, isStandalone, install } = useInstallPrompt();
+  // Installed already → nothing to offer. Otherwise always show: automatic
+  // prompt when Chrome fires it, manual steps when it doesn't (fresh profile,
+  // dev build without SW, heuristics not yet met).
   if (isStandalone) return null;
-  if (!canInstall) {
-    if (!isIos) return null;
-    return (
-      <button
-        onClick={() => {
-          onDone();
-          showInfo('On iPhone: tap Share, then "Add to Home Screen" to install CollabDocs.');
-        }}
-        className="dropdown-item"
-      >
-        <Download size={15} /> Install app
-      </button>
-    );
-  }
+  if (typeof window !== 'undefined' && !('serviceWorker' in navigator) && !isIos) return null;
   return (
     <button
       onClick={async () => {
         onDone();
-        const outcome = await install();
-        if (outcome === 'accepted') showSuccess('CollabDocs installed!');
-        else if (outcome === 'dismissed') showInfo('Install dismissed — find it here anytime.');
+        if (canInstall) {
+          const outcome = await install();
+          if (outcome === 'accepted') showSuccess('CollabDocs installed!');
+          else if (outcome === 'dismissed') showInfo('Install dismissed — find it here anytime.');
+          return;
+        }
+        if (isIos) {
+          showInfo('On iPhone: tap Share, then "Add to Home Screen" to install CollabDocs.');
+          return;
+        }
+        showInfo('Desktop: open the deployed site over HTTPS, then use the install icon in the address bar (or browser menu → Install/Save). Local dev builds cannot prompt.');
       }}
       className="dropdown-item"
     >

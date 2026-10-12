@@ -14,9 +14,14 @@ interface Rect {
   height: number;
 }
 
+const PAD = 6;
+
 /**
- * Spotlight tour overlay. Anchors to [data-tour] targets; any missing
- * target (small screens, hidden elements) degrades to a centered card.
+ * Spotlight tour overlay.
+ * - The dim layer is 4 rectangles AROUND the target (never over it), so the
+ *   highlighted element is never blurred or dimmed.
+ * - The tip card never combines positioning transforms with the entrance
+ *   animation (that conflict caused the first-slide jump).
  */
 export function GuidedTour({ onDone }: { onDone: () => void }) {
   const router = useRouter();
@@ -84,50 +89,79 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const centered = !rect;
+  const dim: React.CSSProperties = {
+    position: 'absolute',
+    background: 'rgba(28,25,23,0.45)',
+  };
+
   const tipWidth = 320;
-  const tipStyle: React.CSSProperties = centered
-    ? { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+  const tipPos: React.CSSProperties = !rect
+    ? { position: 'relative' }
     : step.placement === 'above'
       ? {
+        position: 'absolute',
         left: Math.max(12, Math.min(rect.left, window.innerWidth - tipWidth - 12)),
-        top: Math.max(12, rect.top - 8),
-        transform: 'translateY(-100%)',
+        bottom: Math.max(12, window.innerHeight - rect.top + 8),
+        width: `min(${tipWidth}px, calc(100vw - 24px))`,
       }
       : {
+        position: 'absolute',
         left: Math.max(12, Math.min(rect.left, window.innerWidth - tipWidth - 12)),
         top: Math.min(rect.top + rect.height + 12, window.innerHeight - 12),
+        width: `min(${tipWidth}px, calc(100vw - 24px))`,
       };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90 }}>
-      <div
-        onClick={finish}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(28,25,23,0.45)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
-      />
-      {rect && (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 90,
+        display: !rect ? 'flex' : 'block',
+        alignItems: !rect ? 'center' : undefined,
+        justifyContent: !rect ? 'center' : undefined,
+        padding: !rect ? 16 : 0,
+      }}
+    >
+      <style>{`@keyframes tourFade { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      {rect ? (
+        <>
+          <div onClick={finish} style={{ ...dim, left: 0, right: 0, top: 0, height: Math.max(0, rect.top - PAD) }} />
+          <div onClick={finish} style={{ ...dim, left: 0, right: 0, top: rect.top + rect.height + PAD, bottom: 0 }} />
+          <div
+            onClick={finish}
+            style={{ ...dim, left: 0, width: Math.max(0, rect.left - PAD), top: Math.max(0, rect.top - PAD), height: rect.height + PAD * 2 }}
+          />
+          <div
+            onClick={finish}
+            style={{ ...dim, left: rect.left + rect.width + PAD, right: 0, top: Math.max(0, rect.top - PAD), height: rect.height + PAD * 2 }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: rect.top - PAD,
+              left: rect.left - PAD,
+              width: rect.width + PAD * 2,
+              height: rect.height + PAD * 2,
+              borderRadius: 14,
+              boxShadow: '0 0 0 2.5px #f97316, 0 0 0 6px rgba(249,115,22,0.25)',
+              pointerEvents: 'none',
+              transition: 'all 0.25s ease',
+            }}
+          />
+        </>
+      ) : (
         <div
-          style={{
-            position: 'fixed',
-            top: rect.top - 6,
-            left: rect.left - 6,
-            width: rect.width + 12,
-            height: rect.height + 12,
-            borderRadius: 14,
-            boxShadow: '0 0 0 2.5px #f97316, 0 0 0 6px rgba(249,115,22,0.25)',
-            pointerEvents: 'none',
-            transition: 'all 0.25s ease',
-          }}
+          onClick={finish}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(28,25,23,0.45)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
         />
       )}
       <div
         className="card"
         style={{
-          position: 'fixed',
-          width: `min(${tipWidth}px, calc(100vw - 24px))`,
           padding: '18px 20px',
-          animation: 'scaleIn 0.2s ease',
-          ...tipStyle,
+          animation: 'tourFade 0.18s ease',
+          ...tipPos,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -140,36 +174,41 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
           </button>
         </div>
         <p style={{ fontSize: 13, color: '#57534e', lineHeight: 1.6, margin: '0 0 14px' }}>{step.body}</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ display: 'flex', gap: 4, marginRight: 'auto' }}>
-            {TOUR_STEPS.map((s, i) => (
-              <span
-                key={s.id}
-                style={{
-                  width: i === stepIdx ? 18 : 6,
-                  height: 6,
-                  borderRadius: 999,
-                  background: i === stepIdx ? '#f97316' : '#e7e5e4',
-                  transition: 'all 0.2s ease',
-                }}
-              />
-            ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 4, marginRight: 'auto' }}>
+              {TOUR_STEPS.map((s, i) => (
+                <span
+                  key={s.id}
+                  style={{
+                    width: i === stepIdx ? 18 : 6,
+                    height: 6,
+                    borderRadius: 999,
+                    background: i === stepIdx ? '#f97316' : '#e7e5e4',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              ))}
+            </div>
+            {stepIdx > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setStepIdx((i) => i - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <ArrowLeft size={13} /> Back
+              </button>
+            )}
+            {!last && (
+              <button className="btn btn-primary btn-sm" onClick={() => setStepIdx((i) => i + 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                Next <ArrowRight size={13} />
+              </button>
+            )}
           </div>
-          {stepIdx > 0 && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setStepIdx((i) => i - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <ArrowLeft size={13} /> Back
-            </button>
-          )}
-          {!last ? (
-            <button className="btn btn-primary btn-sm" onClick={() => setStepIdx((i) => i + 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              Next <ArrowRight size={13} />
-            </button>
-          ) : step.cta ? (
-            <button className="btn btn-primary btn-sm" onClick={createFirstDoc} disabled={creating}>
-              {creating ? 'Creating…' : step.cta.label}
-            </button>
-          ) : (
-            <button className="btn btn-primary btn-sm" onClick={finish}>Done</button>
+          {last && (
+            step.cta ? (
+              <button className="btn btn-primary btn-sm" onClick={createFirstDoc} disabled={creating} style={{ width: '100%', justifyContent: 'center' }}>
+                {creating ? 'Creating…' : step.cta.label}
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-sm" onClick={finish} style={{ width: '100%', justifyContent: 'center' }}>Done</button>
+            )
           )}
         </div>
         <button onClick={finish} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a8a29e', fontSize: 12, marginTop: 8, padding: 0 }}>
