@@ -3,6 +3,8 @@
   "short_name": "CollabDocs",
   "description": "Real-time collaborative document editor",
   "start_url": "/",
+  "id": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fdfbf7",
   "theme_color": "#f97316",

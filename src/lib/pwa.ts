@@ -7,9 +7,10 @@ export function useServiceWorker() {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') return;
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Offline shell is best-effort; the app works fine without it.
-    });
+    navigator.serviceWorker.register('/sw.js').then(
+      () => console.info('[pwa] service worker registered'),
+      (err) => console.warn('[pwa] service worker registration failed:', err)
+    );
   }, []);
 }
 
@@ -59,4 +60,39 @@ export function useInstallPrompt() {
   }, []);
 
   return { canInstall: !!deferredPrompt, isIos, isStandalone, install };
+}
+
+export interface InstallDiagnostics {
+  secureContext: boolean;
+  swSupported: boolean;
+  swRegistered: boolean;
+  swActive: boolean;
+  manifestOk: boolean;
+  alreadyInstalled: boolean;
+}
+
+/** Self-check used to explain exactly why install isn't offered yet. */
+export async function getInstallDiagnostics(): Promise<InstallDiagnostics> {
+  const secureContext = typeof window !== 'undefined' && window.isSecureContext;
+  const swSupported = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+  let swRegistered = false;
+  let swActive = false;
+  if (swSupported) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      swRegistered = !!reg;
+      swActive = !!reg?.active;
+    } catch {}
+  }
+  let manifestOk = false;
+  try {
+    const res = await fetch('/manifest.json');
+    const m = await res.json();
+    manifestOk = !!(m.name || m.short_name) && !!m.start_url && Array.isArray(m.icons) && m.icons.length > 0;
+  } catch {}
+  const alreadyInstalled =
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone === true);
+  return { secureContext, swSupported, swRegistered, swActive, manifestOk, alreadyInstalled };
 }

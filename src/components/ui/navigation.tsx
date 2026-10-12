@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { useInstallPrompt } from '@/lib/pwa';
+import { useInstallPrompt, getInstallDiagnostics } from '@/lib/pwa';
 import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare, Sparkles, Download } from 'lucide-react';
 
 export function Navigation() {  const { data: session } = useSession();
@@ -206,7 +206,19 @@ function InstallMenuItem({ onDone }: { onDone: () => void }) {
           showInfo('On iPhone: tap Share, then "Add to Home Screen" to install CollabDocs.');
           return;
         }
-        showInfo('Desktop: open the deployed site over HTTPS, then use the install icon in the address bar (or browser menu → Install/Save). Local dev builds cannot prompt.');
+        // Diagnose instead of guessing: tell the user the exact blocker.
+        const d = await getInstallDiagnostics();
+        if (d.alreadyInstalled) {
+          showInfo('CollabDocs is already installed — look in your apps list.');
+        } else if (!d.secureContext) {
+          showInfo('Install needs HTTPS (or localhost) — the live site qualifies, plain HTTP does not.');
+        } else if (!d.swRegistered || !d.swActive) {
+          showInfo('App shell still activating — browse for a few seconds, then try Install again.');
+        } else if (!d.manifestOk) {
+          showInfo('Install manifest failed to load — check connection and retry.');
+        } else {
+          showInfo('Almost there: click around and spend ~30 seconds in the app — Chrome only offers install to engaged visitors. Then use the address-bar install icon or come back here.');
+        }
       }}
       className="dropdown-item"
     >
