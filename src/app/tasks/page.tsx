@@ -7,6 +7,7 @@ import axios from 'axios';
 import { CheckSquare, CircleAlert, CalendarDays, CalendarClock, Inbox, BellRing } from 'lucide-react';
 import { showError, showSuccess } from '@/lib/toast';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { InboxTask, TaskBucket } from '@/lib/tasks';
 
 const GROUPS: Array<{ key: TaskBucket; title: string; icon: any; color: string }> = [
@@ -71,13 +72,12 @@ export default function TasksPage() {
       </div>
 
       {total === 0 ? (
-        <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            <CheckSquare size={32} color="#d6d3d1" />
-          </div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: '#57534e' }}>All clear — no open tasks</p>
-          <p style={{ fontSize: 13, color: '#a8a29e' }}>Tick the checkbox button in any document toolbar to add one.</p>
-        </div>
+        <EmptyState
+          icon={<CheckSquare size={24} />}
+          title="All clear — no open tasks"
+          body="Tick the checkbox button in any document toolbar to add one. Add @due YYYY-MM-DD inside a task to schedule it."
+          actions={[{ label: 'Open dashboard', primary: true, onClick: () => router.push('/dashboard') }]}
+        />
       ) : (
         <div style={{ display: 'grid', gap: 16 }}>
           {GROUPS.map(({ key, title, icon: Icon, color }) => {

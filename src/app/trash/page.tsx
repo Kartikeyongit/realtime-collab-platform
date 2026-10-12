@@ -7,6 +7,7 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2, RotateCcw, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/Dialog';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { showSuccess, showError } from '@/lib/toast';
 import Link from 'next/link';
 
@@ -96,13 +97,12 @@ export default function TrashPage() {
       </div>
 
       {documents.length === 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', marginTop: '20px' }}>
-          <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: '#fafaf9', border: '1.5px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-            <Trash2 size={32} color="#d6d3d1" />
-          </div>
-          <p style={{ fontSize: '16px', fontWeight: 600, color: '#57534e', marginBottom: '6px' }}>Trash is empty</p>
-          <p style={{ fontSize: '14px', color: '#a8a29e', margin: 0 }}>Deleted documents will appear here</p>
-        </div>
+        <EmptyState
+          icon={<Trash2 size={24} />}
+          title="Trash is empty"
+          body="Deleted documents will appear here. Nothing to restore right now."
+          actions={[{ label: 'Back to documents', primary: true, onClick: () => router.push('/dashboard') }]}
+        />
       ) : (
         <div style={{ display: 'grid', gap: '8px' }}>
           {documents.map((doc) => (

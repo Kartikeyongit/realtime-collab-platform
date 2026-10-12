@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { showError } from '@/lib/toast';
+import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare } from 'lucide-react';
+import { useInstallPrompt } from '@/lib/pwa';
+import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare, Sparkles, Download } from 'lucide-react';
 
-export function Navigation() {
-  const { data: session } = useSession();
+export function Navigation() {  const { data: session } = useSession();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -109,7 +109,7 @@ export function Navigation() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {session ? (
             <>
-              <button onClick={handleNewDocument} disabled={creating} className="btn btn-primary btn-sm">
+              <button onClick={handleNewDocument} disabled={creating} data-tour="new-doc" className="btn btn-primary btn-sm">
                 <Plus size={14} />
                 {creating ? '...' : 'New'}
               </button>
@@ -134,6 +134,17 @@ export function Navigation() {
                       <button onClick={() => { setMenuOpen(false); router.push('/templates'); }} className="dropdown-item">
                         <LayoutTemplate size={15} /> Templates
                       </button>
+                      <button onClick={() => {
+                        setMenuOpen(false);
+                        if (typeof window !== 'undefined' && window.location.pathname === '/dashboard') {
+                          window.dispatchEvent(new Event('collabdocs-start-tour'));
+                        } else {
+                          try { sessionStorage.setItem('collabdocs-tour-replay', '1'); } catch {}
+                          router.push('/dashboard');
+                        }
+                      }} className="dropdown-item">
+                        <Sparkles size={15} /> Take the tour
+                      </button>
                       <button onClick={() => { setMenuOpen(false); handleToday(); }} className="dropdown-item">
                         <CalendarDays size={15} /> Today
                       </button>
@@ -152,6 +163,7 @@ export function Navigation() {
                       <button onClick={() => { setMenuOpen(false); router.push('/settings'); }} className="dropdown-item">
                         <Settings size={15} /> Settings
                       </button>
+                      <InstallMenuItem onDone={() => setMenuOpen(false)} />
                       <div className="dropdown-divider" />
                       <button onClick={() => signOut({ callbackUrl: '/auth/signin' })} className="dropdown-item danger">
                         <LogOut size={15} /> Sign out
@@ -170,5 +182,37 @@ export function Navigation() {
         </div>
       </div>
     </nav>
+  );
+}
+
+function InstallMenuItem({ onDone }: { onDone: () => void }) {
+  const { canInstall, isIos, isStandalone, install } = useInstallPrompt();
+  if (isStandalone) return null;
+  if (!canInstall) {
+    if (!isIos) return null;
+    return (
+      <button
+        onClick={() => {
+          onDone();
+          showInfo('On iPhone: tap Share, then "Add to Home Screen" to install CollabDocs.');
+        }}
+        className="dropdown-item"
+      >
+        <Download size={15} /> Install app
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={async () => {
+        onDone();
+        const outcome = await install();
+        if (outcome === 'accepted') showSuccess('CollabDocs installed!');
+        else if (outcome === 'dismissed') showInfo('Install dismissed — find it here anytime.');
+      }}
+      className="dropdown-item"
+    >
+      <Download size={15} /> Install app
+    </button>
   );
 }

@@ -4,13 +4,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X } from 'lucide-react';
+import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X, Search } from 'lucide-react';
 import { showSuccess, showError, showWarning } from '@/lib/toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { AskWorkspace } from '@/components/ai/AskWorkspace';
+import { GuidedTour } from '@/components/onboarding/GuidedTour';
+import { TOUR_REPLAY_KEY, isTourDone } from '@/components/onboarding/tourSteps';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterSelect } from '@/components/ui/FilterSelect';
 import { WeekStrip } from '@/components/documents/WeekStrip';
+import { MarkdownImport } from '@/components/documents/MarkdownImport';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface DocTag { tag: { id: string; name: string } }
@@ -51,6 +55,7 @@ export default function DashboardPage() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [folderTarget, setFolderTarget] = useState<{ id: string; name: string } | null>(null);
   const [askOpen, setAskOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const quickNoteRef = useRef<() => void>(() => {});
   const firstLoad = useRef(true);
@@ -121,6 +126,24 @@ export default function DashboardPage() {
 
   useEffect(() => { if (status === 'authenticated') fetchMeta(); }, [status, fetchMeta]);
   useEffect(() => { if (status === 'authenticated') fetchDocuments(); }, [status, fetchDocuments]);
+  // First-run tour: fresh account with no docs yet, or explicit replay request.
+  useEffect(() => {
+    if (status !== 'authenticated' || initialLoading) return;
+    let replay = false;
+    try {
+      replay = sessionStorage.getItem(TOUR_REPLAY_KEY) === '1';
+      if (replay) sessionStorage.removeItem(TOUR_REPLAY_KEY);
+    } catch {}
+    if (replay || (total === 0 && !isTourDone())) {
+      const t = setTimeout(() => setTourOpen(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, [status, initialLoading, total]);
+  useEffect(() => {
+    const startTour = () => setTourOpen(true);
+    window.addEventListener('collabdocs-start-tour', startTour);
+    return () => window.removeEventListener('collabdocs-start-tour', startTour);
+  }, []);
   // Overdue nudge, once per tab session ($0: no email/cron — in-app + browser only)
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -219,6 +242,13 @@ export default function DashboardPage() {
   };
   quickNoteRef.current = quickNote;
 
+  const createDoc = async () => {
+    try {
+      const { data } = await axios.post('/api/documents', { title: 'Untitled document' });
+      router.push(`/documents/${data.id}`);
+    } catch { showError('Failed to create document'); }
+  };
+
   if (status === 'loading' || initialLoading) return <DashboardSkeleton />;
 
   return (
@@ -229,18 +259,19 @@ export default function DashboardPage() {
         </h1>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={openToday} title="Open today's journal">Today</button>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={quickNote} title="Capture a quick note (Alt+N)">+ Quick note</button>
-        <button className="btn btn-secondary btn-sm dash-filter" onClick={() => setAskOpen(true)} title="Ask across all your notes">✨ Ask</button>
+        <MarkdownImport />
+        <button className="btn btn-secondary btn-sm dash-filter" data-tour="ask" onClick={() => setAskOpen(true)} title="Ask across all your notes">✨ Ask</button>
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
 
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 12 }}>
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 12 }} data-tour="week">
         <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>This week</div>
         <WeekStrip />
       </div>
 
       {barVisible && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
 
-      <div className="card" style={{ padding: '14px 16px', marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="card" style={{ padding: '14px 16px', marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }} data-tour="filters">
         <input className="input dash-filter" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220, flex: '1 1 160px' }} />
         <FilterSelect
           ariaLabel="Filter by folder"
@@ -330,7 +361,31 @@ export default function DashboardPage() {
       </div>
 
       {documents.length === 0 && !refetching ? (
-        <p style={{ color: '#a8a29e', padding: '40px 0', textAlign: 'center' }}>No documents. Create one with + New.</p>
+        (() => {
+          const filtering = !!(debouncedSearch || folderFilter || tagFilter || favOnly);
+          if (filtering) {
+            return (
+              <EmptyState
+                icon={<Search size={24} />}
+                title="No matches"
+                body="Nothing fits the current search and filters."
+                actions={[{ label: 'Clear filters', primary: true, onClick: () => { setFolderFilter(''); setTagFilter(''); setFavOnly(false); setSearch(''); setPage(1); } }]}
+              />
+            );
+          }
+          return (
+            <EmptyState
+              icon={<FileText size={24} />}
+              title="Your first document awaits"
+              body="Capture a note, start a journal entry, or pick a template — it all syncs live and stays available offline."
+              actions={[
+                { label: '+ New document', primary: true, onClick: createDoc },
+                { label: 'Browse templates', onClick: () => router.push('/templates') },
+                { label: 'Take the tour', onClick: () => setTourOpen(true) },
+              ]}
+            />
+          );
+        })()
       ) : (
         <div style={{ display: 'grid', gap: 8, opacity: refetching ? 0.6 : 1, transition: 'opacity 0.15s' }}>
           {documents.map((doc) => (
@@ -389,6 +444,7 @@ export default function DashboardPage() {
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} folders={folders} onNavigate={(id) => router.push(`/documents/${id}`)} onAsk={() => setAskOpen(true)} />
       <AskWorkspace open={askOpen} onClose={() => setAskOpen(false)} />
+      {tourOpen && <GuidedTour onDone={() => setTourOpen(false)} />}
       <ConfirmDialog
         isOpen={!!folderTarget}
         onClose={() => setFolderTarget(null)}
