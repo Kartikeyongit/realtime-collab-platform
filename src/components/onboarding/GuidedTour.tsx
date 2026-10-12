@@ -60,6 +60,18 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
     };
   }, [measure]);
 
+  // A focused target shows the global :focus-visible outline *inside* the
+  // spotlight ring (double-outline clash). Drop focus only when it sits on
+  // the highlighted element itself — tour-card keyboard focus is untouched.
+  useEffect(() => {
+    if (!step.target) return;
+    try {
+      const el = document.querySelector(step.target) as HTMLElement | null;
+      const active = document.activeElement as HTMLElement | null;
+      if (el && active && (active === el || el.contains(active))) active.blur();
+    } catch {}
+  }, [step]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') finish();
