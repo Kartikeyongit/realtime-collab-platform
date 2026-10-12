@@ -65,9 +65,9 @@ export function Navigation() {  const { data: session } = useSession();
       zIndex: 40,
       height: '52px',
     }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', flexShrink: 0, minWidth: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <div style={{ 
               width: '30px', height: '30px', 
               background: 'linear-gradient(135deg, #f97316, #ea580c)', 
@@ -80,7 +80,7 @@ export function Navigation() {  const { data: session } = useSession();
           </Link>
           {session && (
             <>
-              <span className="nav-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+              <span className="nav-hide-mid" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
                 <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <LayoutDashboard size={15} />
                   Documents
@@ -106,7 +106,7 @@ export function Navigation() {  const { data: session } = useSession();
             </>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           {session ? (
             <>
               <button onClick={handleNewDocument} disabled={creating} data-tour="new-doc" className="btn btn-primary btn-sm">

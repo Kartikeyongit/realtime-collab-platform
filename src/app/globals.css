@@ -901,6 +901,14 @@ body.editor-focus .ProseMirror .focus-dim {
   }
 }
 
+/* Mid-width nav: collapse center links into the avatar menu before they can
+   shove the bell/avatar off-screen (all links already live in that menu). */
+@media (max-width: 940px) {
+  .nav-hide-mid {
+    display: none !important;
+  }
+}
+
 /* Mobile nav: hide desktop links */
 @media (max-width: 640px) {
   .nav-hide-mobile {
