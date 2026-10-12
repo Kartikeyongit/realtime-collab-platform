@@ -47,14 +47,27 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
       setRect(null);
       return;
     }
-    setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+    // Clamp to the viewport so the ring never runs off-screen or forces scroll.
+    const left = Math.max(6, r.left);
+    const right = Math.min(window.innerWidth - 6, r.right);
+    const top = Math.max(6, r.top);
+    const bottom = Math.min(window.innerHeight - 6, r.bottom);
+    if (right <= left || bottom <= top) {
+      setRect(null);
+      return;
+    }
+    setRect({ top, left, width: right - left, height: bottom - top });
   }, [step]);
 
   useEffect(() => {
     measure();
+    // Layout shifts after measure (fonts, chips loading, shimmer bar) would
+    // strand the ring — re-measure on resize/scroll AND on a short interval.
+    const timer = setInterval(measure, 400);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
     return () => {
+      clearInterval(timer);
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
@@ -159,6 +172,7 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
             style={{ ...dim, left: rect.left + rect.width + PAD, right: 0, top: Math.max(0, rect.top - PAD), height: rect.height + PAD * 2 }}
           />
           <div
+            key={step.id}
             style={{
               position: 'absolute',
               top: rect.top - PAD,
@@ -168,7 +182,6 @@ export function GuidedTour({ onDone }: { onDone: () => void }) {
               borderRadius: 12,
               border: '2.5px solid #f97316',
               pointerEvents: 'none',
-              transition: 'all 0.25s ease',
             }}
           />
         </>
