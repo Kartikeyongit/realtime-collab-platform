@@ -29,7 +29,7 @@ export const DocLinkSuggest = Extension.create({
         allowSpaces: true,
         startOfLine: false,
         items: async ({ query, editor }) => {
-          if (!query.startsWith('[')) return [];
+          if (!query.startsWith('[') || !query.slice(1).trim()) return [];
           if (editor.isActive('code') || editor.isActive('codeBlock')) return [];
           const q = query.slice(1).trim();
           try {
@@ -147,8 +147,17 @@ export const DocLinkSuggest = Extension.create({
             paint();
           };
 
+          // Popup only while there is a real `[[query` — a bare trigger
+          // (or backspacing down to one) never shows, and backspacing the
+          // trigger away hides via onExit.
+          const hasLinkQuery = (props: any) => {
+            const q: string = props.query ?? '';
+            return q.startsWith('[') && q.slice(1).trim().length > 0;
+          };
+
           return {
             onStart: (props: any) => {
+              if (!hasLinkQuery(props)) return;
               build(props);
               if (!listEl) return;
               const { clientRect } = props;
@@ -166,6 +175,10 @@ export const DocLinkSuggest = Extension.create({
               }) as unknown as TippyInstance;
             },
             onUpdate: (props: any) => {
+              if (!hasLinkQuery(props)) {
+                hide();
+                return;
+              }
               build(props);
               if (!listEl) {
                 hide();
@@ -201,8 +214,7 @@ export const DocLinkSuggest = Extension.create({
                 }, 0);
                 return false;
               }
-              if (!items.length) return false;
-              if (props.event.key === 'ArrowDown') {
+              if (!items.length) return false;              if (props.event.key === 'ArrowDown') {
                 selected = (selected + 1) % items.length;
                 paint();
                 return true;
@@ -213,7 +225,7 @@ export const DocLinkSuggest = Extension.create({
                 return true;
               }
               if (props.event.key === 'Enter') {
-                if (items[selected]) {
+                if (popup && items[selected]) {
                   props.command({ ...items[selected] });
                   return true;
                 }

@@ -114,13 +114,17 @@ export const EmojiSuggestion = Extension.create({
 
           return {
             onStart: (props: any) => {
+              // A bare trigger (empty query) never opens the panel: it only
+              // appears once there is something to match, and closes the
+              // moment backspacing empties the query again.
+              if (!((props.query ?? '').length > 0)) return;
               build(props);
               const { clientRect } = props;
-              if (!clientRect) return;
+              if (!clientRect || !listEl) return;
               popup = tippy('body', {
                 getReferenceClientRect: clientRect,
                 appendTo: () => document.body,
-                content: listEl!,
+                content: listEl,
                 showOnCreate: true,
                 interactive: true,
                 trigger: 'manual',
@@ -130,14 +134,36 @@ export const EmojiSuggestion = Extension.create({
               }) as unknown as TippyInstance;
             },
             onUpdate: (props: any) => {
+              if (!((props.query ?? '').length > 0)) {
+                hide();
+                return;
+              }
               build(props);
-              popup?.setProps({ getReferenceClientRect: props.clientRect });
+              if (!listEl) return;
+              if (!popup) {
+                const { clientRect } = props;
+                if (!clientRect) return;
+                popup = tippy('body', {
+                  getReferenceClientRect: clientRect,
+                  appendTo: () => document.body,
+                  content: listEl,
+                  showOnCreate: true,
+                  interactive: true,
+                  trigger: 'manual',
+                  placement: 'bottom-start',
+                  arrow: false,
+                  offset: [0, 6],
+                }) as unknown as TippyInstance;
+              } else {
+                popup.setProps({ getReferenceClientRect: props.clientRect });
+              }
             },
             onKeyDown: (props: any) => {
               if (props.event.key === 'Escape') {
                 hide();
                 return true;
               }
+              if (!popup) return false;
               if (props.event.key === 'Backspace' || props.event.key === 'Delete') {
                 const view = props.view;
                 setTimeout(() => {
@@ -156,7 +182,7 @@ export const EmojiSuggestion = Extension.create({
                 return true;
               }
               if (props.event.key === 'Enter') {
-                if (items[selected]) {
+                if (popup && items[selected]) {
                   props.command({ ...items[selected] });
                   return true;
                 }
