@@ -22,6 +22,7 @@ export async function GET(
       owner: { select: { id: true, name: true, image: true } },
       collaborators: { include: { user: { select: { id: true, name: true, image: true } } } },
       folder: { select: { id: true, name: true } },
+      workspace: { select: { id: true, name: true, color: true } },
       tags: { include: { tag: { select: { id: true, name: true } } } },
       comments: {
         include: {
@@ -76,6 +77,14 @@ export async function PUT(
       select: { id: true },
     });
     if (folder) data.folderId = folder.id;
+  }
+  if (body.workspaceId === null) data.workspaceId = null;
+  else if (typeof body.workspaceId === 'string' && body.workspaceId) {
+    const ws = await prisma.workspace.findFirst({
+      where: { id: body.workspaceId, ownerId: user.id },
+      select: { id: true },
+    });
+    if (ws) data.workspaceId = ws.id;
   }
 
   if (Object.keys(data).length > 0) {

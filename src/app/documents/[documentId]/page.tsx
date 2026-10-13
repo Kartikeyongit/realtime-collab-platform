@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { Editor } from '@tiptap/react';
 import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
+import { Backlinks } from '@/components/documents/Backlinks';
 import { DocumentTags } from '@/components/documents/DocumentTags';
 import { VersionHistory } from '@/components/editor/VersionHistory';
 import { CommandPalette } from '@/components/ui/CommandPalette';
@@ -76,16 +77,23 @@ export default function DocumentPage() {
     };
     const onOnline = () => setIsOnline(true);
     const onOffline = () => { setIsOnline(false); setConnectionStatus('offline'); };
+    // Document-link pills navigate via event (keeps routing out of the editor).
+    const onOpenDoc = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (id && id !== documentId) router.push(`/documents/${id}`);
+    };
     setIsOnline(typeof navigator === 'undefined' ? true : navigator.onLine);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
+    window.addEventListener('collabdocs-open-doc', onOpenDoc);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
+      window.removeEventListener('collabdocs-open-doc', onOpenDoc);
     };
-  }, []);
+  }, [documentId, router]);
 
   const fetchDocument = async () => {
     abortRef.current.abort();
@@ -269,6 +277,7 @@ export default function DocumentPage() {
               onConnectionChange={handleConnectionChange}
             />
           </ErrorBoundary>
+          {!isLoading && !error && <Backlinks documentId={documentId} />}
         </div>
         {showComments && (
           <CommentThread 

@@ -176,6 +176,10 @@ export class ExportService {
     for (const n of nodes) {
       if (n.type === 'image') {
         out.push(await ExportService.imgRun(n));
+      } else if (n.type === 'docLink') {
+        // Linked doc title degrades to blue link-styled text in exports.
+        const title = String((n as any).attrs?.title || 'link');
+        out.push(new TextRun({ text: `📄 ${title}`, color: '0563C1', underline: { type: 'single' } }));
       } else {
         out.push(...ExportService.tr(n));
       }

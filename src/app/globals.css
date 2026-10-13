@@ -376,6 +376,33 @@ body {
   margin: 4px 0;
 }
 
+/* Document link pills ([[Title]]) — local-only visuals, IDs sync via Yjs */
+.ProseMirror .doc-link {
+  display: inline-block;
+  font-size: 0.92em;
+  font-weight: 600;
+  color: #c2410c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  padding: 1px 9px;
+  margin: 0 1px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.ProseMirror .doc-link:hover {
+  background: #ffedd5;
+}
+.ProseMirror .doc-link-broken {
+  color: #a8a29e;
+  background: #f5f5f4;
+  border-color: #e7e5e4;
+  cursor: default;
+  text-decoration: line-through;
+  text-decoration-color: #d6d3d1;
+}
+
 /* Task lists (TipTap taskList/taskItem): no bullets, custom warm checkboxes */
 .ProseMirror ul[data-type='taskList'] {
   list-style: none !important;

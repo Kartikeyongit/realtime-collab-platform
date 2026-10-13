@@ -25,6 +25,7 @@ model User {
   notifications  Notification[] @relation("NotificationRecipient")
   actorNotifications Notification[] @relation("NotificationActor")
   notificationPreference NotificationPreference?
+  workspaces     Workspace[]
   folders        Folder[]
   tags           Tag[]
   versions       DocumentVersion[]
@@ -76,6 +77,8 @@ model Document {
   folder        Folder?                @relation(fields: [folderId], references: [id], onDelete: SetNull)
   isFavorite    Boolean                @default(false)
   isPinned      Boolean                @default(false)
+  workspaceId   String?
+  workspace     Workspace?             @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   tags          DocumentTag[]
   versions      DocumentVersion[]
   chunks        DocumentChunk[]
@@ -96,11 +99,28 @@ model Folder {
   parent    Folder?    @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children  Folder[]   @relation("FolderChildren")
   documents Document[]
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   @@index([ownerId])
   @@index([parentId])
+  @@index([workspaceId])
+}
+
+model Workspace {
+  id        String     @id @default(cuid())
+  name      String
+  color     String     @default("#f97316")
+  ownerId   String
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  documents Document[]
+  folders   Folder[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([ownerId])
 }
 
 model Tag {

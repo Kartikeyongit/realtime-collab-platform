@@ -4,13 +4,29 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { prisma } = await import('@/lib/prisma');
+  const { searchParams } = new URL(request.url);
+  const workspaceId = searchParams.get('workspaceId') || '';
+  const where: any = { ownerId: session.user.id };
+  if (workspaceId === 'none') {
+    where.workspaceId = null;
+  } else if (workspaceId) {
+    const ws = await prisma.workspace.findFirst({
+      where: { id: workspaceId, ownerId: session.user.id },
+      select: { id: true },
+    });
+    if (!ws) return NextResponse.json({ folders: [] });
+    where.workspaceId = workspaceId;
+  }
   const folders = await prisma.folder.findMany({
-    where: { ownerId: session.user.id },
-    include: { _count: { select: { documents: true, children: true } } },
+    where,
+    include: {
+      _count: { select: { documents: true, children: true } },
+      workspace: { select: { id: true, name: true, color: true } },
+    },
     orderBy: { name: 'asc' },
   });
   return NextResponse.json({ folders });
@@ -31,8 +47,16 @@ export async function POST(request: Request) {
     });
     if (parent) parentId = parent.id;
   }
+  let workspaceId: string | null = null;
+  if (body.workspaceId) {
+    const ws = await prisma.workspace.findFirst({
+      where: { id: body.workspaceId, ownerId: session.user.id },
+      select: { id: true },
+    });
+    if (ws) workspaceId = ws.id;
+  }
   const folder = await prisma.folder.create({
-    data: { name, ownerId: session.user.id, parentId },
+    data: { name, ownerId: session.user.id, parentId, workspaceId },
   });
   return NextResponse.json(folder, { status: 201 });
 }

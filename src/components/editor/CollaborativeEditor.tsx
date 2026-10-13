@@ -22,6 +22,8 @@ import { CustomTable, CustomTableRow, CustomTableCell, CustomTableHeader } from 
 import { FontSize } from './extensions/FontSize';
 import { EmojiSuggestion } from './extensions/EmojiSuggestion';
 import { ParagraphFocus } from './extensions/ParagraphFocus';
+import { DocLink } from './extensions/DocLink';
+import { DocLinkSuggest } from './extensions/DocLinkSuggest';
 import { Toolbar } from './Toolbar';
 import { useYjsCollaboration } from '@/hooks/useYjsCollaboration';
 import { maybeAutoIndex } from '@/lib/ai/autoIndex';
@@ -158,6 +160,8 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
         Superscript,
         EmojiSuggestion,
         ParagraphFocus,
+        DocLink,
+        DocLinkSuggest,
         Collaboration.configure({ document: yDoc }),
         CollaborationCursor.configure({
           provider: cursorProvider,

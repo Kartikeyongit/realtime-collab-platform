@@ -8,7 +8,7 @@ import axios from 'axios';
 import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { useInstallPrompt, getInstallDiagnostics } from '@/lib/pwa';
-import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare, Sparkles, Download } from 'lucide-react';
+import { Plus, FileText, LayoutDashboard, LogOut, ChevronDown, Trash2, Settings, LayoutTemplate, CalendarDays, Loader2, CheckSquare, Sparkles, Download, Network } from 'lucide-react';
 
 export function Navigation() {  const { data: session } = useSession();
   const router = useRouter();
@@ -102,6 +102,10 @@ export function Navigation() {  const { data: session } = useSession();
                     </span>
                   )}
                 </Link>
+                <Link href="/graph" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Network size={15} />
+                  Graph
+                </Link>
               </span>
             </>
           )}
@@ -155,6 +159,9 @@ export function Navigation() {  const { data: session } = useSession();
                             {openTasks > 99 ? '99+' : openTasks}
                           </span>
                         )}
+                      </button>
+                      <button onClick={() => { setMenuOpen(false); router.push('/graph'); }} className="dropdown-item">
+                        <Network size={15} /> Graph
                       </button>
                       <div className="dropdown-divider" />
                       <button onClick={() => { setMenuOpen(false); router.push('/trash'); }} className="dropdown-item">

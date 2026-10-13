@@ -42,12 +42,23 @@ export async function POST(request: Request) {
       if (folder) folderId = folder.id;
     }
 
+    // Optional workspace assignment (owner-scoped; folders inherit on move).
+    let workspaceId: string | null = null;
+    if (body.workspaceId) {
+      const ws = await prisma.workspace.findFirst({
+        where: { id: body.workspaceId, ownerId: session.user.id },
+        select: { id: true },
+      });
+      if (ws) workspaceId = ws.id;
+    }
+
     const document = await prisma.document.create({
       data: {
         title,
         ownerId: session.user.id,
         content,
         folderId,
+        workspaceId,
         isFavorite: !!body.isFavorite,
         isPinned: !!body.isPinned,
       },
@@ -93,6 +104,7 @@ export async function GET(request: Request) {
     const favorite = searchParams.get('favorite') === '1' || searchParams.get('favorite') === 'true';
     const pinned = searchParams.get('pinned') === '1' || searchParams.get('pinned') === 'true';
     const sort = searchParams.get('sort') || 'updated'; // updated | title | created
+    const workspaceId = searchParams.get('workspaceId') || '';
 
     const { prisma } = await import('@/lib/prisma');
 
@@ -103,6 +115,20 @@ export async function GET(request: Request) {
         { collaborators: { some: { userId: session.user.id } } },
       ],
     };
+
+    if (workspaceId === 'none') {
+      where.workspaceId = null;
+    } else if (workspaceId) {
+      // Verify ownership so one user can't probe another's workspace ids.
+      const ws = await prisma.workspace.findFirst({
+        where: { id: workspaceId, ownerId: session.user.id },
+        select: { id: true },
+      });
+      if (!ws) {
+        return NextResponse.json({ documents: [], total: 0, page, totalPages: 0 });
+      }
+      where.workspaceId = workspaceId;
+    }
 
     if (search) {
       where.title = { contains: search, mode: 'insensitive' };
@@ -132,6 +158,7 @@ export async function GET(request: Request) {
           owner: { select: { id: true, name: true, image: true } },
           collaborators: { include: { user: { select: { id: true, name: true, image: true } } } },
           folder: { select: { id: true, name: true } },
+          workspace: { select: { id: true, name: true, color: true } },
           tags: { include: { tag: { select: { id: true, name: true } } } },
         },
         orderBy,

@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterSelect } from '@/components/ui/FilterSelect';
 import { WeekStrip } from '@/components/documents/WeekStrip';
 import { MarkdownImport } from '@/components/documents/MarkdownImport';
+import { WorkspaceSwitcher, type Workspace } from '@/components/documents/WorkspaceSwitcher';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface DocTag { tag: { id: string; name: string } }
@@ -23,6 +24,7 @@ interface DocItem {
   title: string;
   updatedAt: string;
   folder?: { id: string; name: string } | null;
+  workspace?: DocWorkspace | null;
   tags?: DocTag[];
   isFavorite?: boolean;
   isPinned?: boolean;
@@ -31,6 +33,17 @@ interface DocItem {
 }
 interface Folder { id: string; name: string; _count?: { documents: number } }
 interface Tag { id: string; name: string; _count?: { documents: number } }
+interface DocWorkspace { id: string; name: string; color: string }
+
+const WORKSPACE_KEY = 'collabdocs-workspace';
+
+function storedWorkspace(): string {
+  try {
+    return localStorage.getItem(WORKSPACE_KEY) || 'all';
+  } catch {
+    return 'all';
+  }
+}
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -38,6 +51,11 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<DocItem[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>(() =>
+    typeof window === 'undefined' ? 'all' : storedWorkspace()
+  );
+  const [wsTarget, setWsTarget] = useState<Workspace | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refetching, setRefetching] = useState(false);
   const [barVisible, setBarVisible] = useState(false);
@@ -87,11 +105,17 @@ export default function DashboardPage() {
 
   const fetchMeta = useCallback(async () => {
     try {
-      const [f, t] = await Promise.all([axios.get('/api/folders'), axios.get('/api/tags')]);
+      const wsParam = workspaceFilter && workspaceFilter !== 'all' ? `?workspaceId=${workspaceFilter}` : '';
+      const [f, t, w] = await Promise.all([
+        axios.get(`/api/folders${wsParam}`),
+        axios.get('/api/tags'),
+        axios.get('/api/workspaces'),
+      ]);
       setFolders(f.data.folders || []);
       setTags(t.data.tags || []);
+      setWorkspaces(w.data.workspaces || []);
     } catch {}
-  }, []);
+  }, [workspaceFilter]);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -109,6 +133,7 @@ export default function DashboardPage() {
       if (folderFilter) params.set('folderId', folderFilter);
       if (tagFilter) params.set('tag', tagFilter);
       if (favOnly) params.set('favorite', '1');
+      if (workspaceFilter && workspaceFilter !== 'all') params.set('workspaceId', workspaceFilter);
       const { data } = await axios.get(`/api/documents?${params}`);
       setDocuments(data.documents);
       setTotalPages(data.totalPages);
@@ -122,7 +147,7 @@ export default function DashboardPage() {
       if (barTimer.current) clearTimeout(barTimer.current);
       barTimer.current = setTimeout(() => setBarVisible(false), 1200);
     }
-  }, [page, debouncedSearch, folderFilter, tagFilter, favOnly, sort]);
+  }, [page, debouncedSearch, folderFilter, tagFilter, favOnly, sort, workspaceFilter]);
 
   useEffect(() => { if (status === 'authenticated') fetchMeta(); }, [status, fetchMeta]);
   useEffect(() => { if (status === 'authenticated') fetchDocuments(); }, [status, fetchDocuments]);
@@ -179,11 +204,65 @@ export default function DashboardPage() {
     };
   }, [status, fetchDocuments]);
 
+  const activeWorkspaceId = workspaceFilter !== 'all' && workspaceFilter !== 'none' ? workspaceFilter : null;
+
+  const changeWorkspace = (v: string) => {
+    setWorkspaceFilter(v);
+    try {
+      localStorage.setItem(WORKSPACE_KEY, v);
+    } catch {}
+    // Folders belong to workspaces — reset the folder filter on switch.
+    setFolderFilter('');
+    setPage(1);
+  };
+
+  const createWorkspace = async (name: string, color: string) => {
+    try {
+      const { data } = await axios.post('/api/workspaces', { name, color });
+      setWorkspaces((p) => [...p, data]);
+      showSuccess(`Workspace “${name}” created`);
+      changeWorkspace(data.id);
+    } catch {
+      showError('Failed to create workspace');
+      throw new Error('create-failed');
+    }
+  };
+
+  const renameWorkspace = async (id: string, name: string) => {
+    try {
+      const { data } = await axios.patch(`/api/workspaces/${id}`, { name });
+      setWorkspaces((p) => p.map((w) => (w.id === id ? { ...w, name: data.name } : w)));
+    } catch {
+      showError('Failed to rename');
+    }
+  };
+
+  const deleteWorkspace = async () => {
+    if (!wsTarget) return;
+    try {
+      await axios.delete(`/api/workspaces/${wsTarget.id}`);
+      setWorkspaces((p) => p.filter((w) => w.id !== wsTarget.id));
+      if (workspaceFilter === wsTarget.id) changeWorkspace('all');
+      else {
+        fetchDocuments();
+        fetchMeta();
+      }
+      showSuccess('Workspace deleted — contents kept in Unsorted');
+    } catch {
+      showError('Failed to delete workspace');
+    } finally {
+      setWsTarget(null);
+    }
+  };
+
   const createFolder = async () => {
     const name = newFolder.trim();
     if (!name) return;
     try {
-      const { data } = await axios.post('/api/folders', { name });
+      const { data } = await axios.post('/api/folders', {
+        name,
+        ...(activeWorkspaceId ? { workspaceId: activeWorkspaceId } : {}),
+      });
       setFolders((p) => [...p, data].sort((a, b) => a.name.localeCompare(b.name)));
       setNewFolder('');
       showSuccess('Folder created');
@@ -227,6 +306,15 @@ export default function DashboardPage() {
     } catch { showError('Failed to move'); }
   };
 
+  const moveDocWorkspace = async (docId: string, wsId: string) => {
+    try {
+      await axios.put(`/api/documents/${docId}`, { workspaceId: wsId || null, skipVersion: true });
+      fetchDocuments();
+      fetchMeta();
+      showSuccess(wsId ? 'Moved to workspace' : 'Moved to Unsorted');
+    } catch { showError('Failed to move'); }
+  };
+
   const openToday = async () => {
     try {
       const { data } = await axios.get('/api/documents/daily');
@@ -244,7 +332,11 @@ export default function DashboardPage() {
 
   const createDoc = async () => {
     try {
-      const { data } = await axios.post('/api/documents', { title: 'Untitled document' });
+      // New docs inherit the active workspace; journals/quick notes stay Unsorted.
+      const { data } = await axios.post('/api/documents', {
+        title: 'Untitled document',
+        ...(activeWorkspaceId ? { workspaceId: activeWorkspaceId } : {}),
+      });
       router.push(`/documents/${data.id}`);
     } catch { showError('Failed to create document'); }
   };
@@ -272,6 +364,14 @@ export default function DashboardPage() {
       {barVisible && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
 
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }} data-tour="filters">
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          value={workspaceFilter}
+          onChange={changeWorkspace}
+          onCreate={createWorkspace}
+          onRename={renameWorkspace}
+          onDelete={(ws) => setWsTarget(ws)}
+        />
         <input className="input dash-filter" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220, flex: '1 1 160px' }} />
         <FilterSelect
           ariaLabel="Filter by folder"
@@ -362,14 +462,14 @@ export default function DashboardPage() {
 
       {documents.length === 0 && !refetching ? (
         (() => {
-          const filtering = !!(debouncedSearch || folderFilter || tagFilter || favOnly);
+          const filtering = !!(debouncedSearch || folderFilter || tagFilter || favOnly || (workspaceFilter && workspaceFilter !== 'all'));
           if (filtering) {
             return (
               <EmptyState
                 icon={<Search size={24} />}
                 title="No matches"
                 body="Nothing fits the current search and filters."
-                actions={[{ label: 'Clear filters', primary: true, onClick: () => { setFolderFilter(''); setTagFilter(''); setFavOnly(false); setSearch(''); setPage(1); } }]}
+                actions={[{ label: 'Clear filters', primary: true, onClick: () => { setFolderFilter(''); setTagFilter(''); setFavOnly(false); setSearch(''); changeWorkspace('all'); setPage(1); } }]}
               />
             );
           }
@@ -402,6 +502,11 @@ export default function DashboardPage() {
                         <FolderIcon size={11} /> {doc.folder.name}
                       </span>
                     )}
+                    {doc.workspace && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#57534e', background: '#fafaf9', border: '1px solid #e7e5e4', borderRadius: 999, padding: '2px 8px' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 999, background: doc.workspace.color }} /> {doc.workspace.name}
+                      </span>
+                    )}
                     {(doc.tags || []).map((t) => (
                       <span key={t.tag.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#6d28d9', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 999, padding: '2px 8px' }}>
                         #{t.tag.name}
@@ -428,6 +533,21 @@ export default function DashboardPage() {
                     ]}
                   />
                 </span>
+                {workspaces.length > 0 && (
+                  <span onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }} title="Move to workspace">
+                    <FilterSelect
+                      ariaLabel="Move to workspace"
+                      size="sm"
+                      maxWidth={130}
+                      value={doc.workspace?.id || ''}
+                      onChange={(v) => moveDocWorkspace(doc.id, v)}
+                      options={[
+                        { value: '', label: 'Unsorted' },
+                        ...workspaces.map((w) => ({ value: w.id, label: w.name })),
+                      ]}
+                    />
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -451,6 +571,15 @@ export default function DashboardPage() {
         onConfirm={deleteFolder}
         title="Delete folder?"
         description={folderTarget ? `"${folderTarget.name}" will be deleted. Documents inside will be kept (moved to No folder).` : ''}
+        confirmText="Delete"
+        variant="danger"
+      />
+      <ConfirmDialog
+        isOpen={!!wsTarget}
+        onClose={() => setWsTarget(null)}
+        onConfirm={deleteWorkspace}
+        title="Delete workspace?"
+        description={wsTarget ? `"${wsTarget.name}" will be deleted. Its documents and folders will be kept in Unsorted.` : ''}
         confirmText="Delete"
         variant="danger"
       />
