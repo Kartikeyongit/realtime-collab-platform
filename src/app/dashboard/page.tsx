@@ -194,15 +194,34 @@ export default function DashboardPage() {
       })
       .catch(() => {});
   }, [status]);
-  // Refetch when returning to dashboard (back from document) so list is fresh but skeleton shows on first paint
+  // Shimmer on return: coming back from another tab/window/app shows the bar
+  // for a fixed beat while fresh data loads — even if the fetch is instant.
+  // visibilitychange covers mobile/app switches where window focus may not fire;
+  // both fire on desktop returns, so throttle to one refresh per window.
+  const lastReturnRef = useRef(0);
   useEffect(() => {
-    const onFocus = () => { if (status === 'authenticated' && !firstLoad.current) fetchDocuments(); };
-    window.addEventListener('focus', onFocus);
+    const onReturn = () => {
+      if (status !== 'authenticated' || firstLoad.current) return;
+      const now = Date.now();
+      if (now - lastReturnRef.current < 2500) return;
+      lastReturnRef.current = now;
+      if (barTimer.current) clearTimeout(barTimer.current);
+      setBarVisible(true);
+      fetchDocuments().finally(() => {
+        if (barTimer.current) clearTimeout(barTimer.current);
+        barTimer.current = setTimeout(() => setBarVisible(false), 1800);
+      });
+      fetchMeta();
+    };
+    const onVisibility = () => { if (!document.hidden) onReturn(); };
+    window.addEventListener('focus', onReturn);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', onReturn);
+      document.removeEventListener('visibilitychange', onVisibility);
       if (barTimer.current) clearTimeout(barTimer.current);
     };
-  }, [status, fetchDocuments]);
+  }, [status, fetchDocuments, fetchMeta]);
 
   const activeWorkspaceId = workspaceFilter !== 'all' && workspaceFilter !== 'none' ? workspaceFilter : null;
 
