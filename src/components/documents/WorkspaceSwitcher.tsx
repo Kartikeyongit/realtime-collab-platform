@@ -47,7 +47,6 @@ export function WorkspaceSwitcher({
   onDelete: (ws: Workspace) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [managing, setManaging] = useState(false);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(COLORS[0]);
   const [busy, setBusy] = useState(false);
@@ -60,13 +59,11 @@ export function WorkspaceSwitcher({
     const onDown = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
-        setManaging(false);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(false);
-        setManaging(false);
       }
     };
     document.addEventListener('mousedown', onDown);
@@ -90,7 +87,6 @@ export function WorkspaceSwitcher({
   const pick = (v: string) => {
     onChange(v);
     setOpen(false);
-    setManaging(false);
   };
 
   const submitCreate = async () => {
@@ -176,9 +172,9 @@ export function WorkspaceSwitcher({
           </button>
 
           {workspaces.map((ws) => (
-            <div key={ws.id}>
+            <div key={ws.id} className="ws-row">
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <button onClick={() => pick(ws.id)} style={{ ...rowStyle(value === ws.id), flex: 1 }} title={`${ws.name} (${ws._count?.documents ?? 0} docs)`}>
+                <button onClick={() => pick(ws.id)} style={{ ...rowStyle(value === ws.id), flex: 1, minWidth: 0 }} title={`${ws.name} (${ws._count?.documents ?? 0} docs)`}>
                   <Dot color={ws.color} />
                   {renamingId === ws.id ? (
                     <input
@@ -199,8 +195,8 @@ export function WorkspaceSwitcher({
                   <span style={{ fontSize: 11, color: '#a8a29e', flexShrink: 0 }}>{ws._count?.documents ?? 0}</span>
                   {value === ws.id && renamingId !== ws.id && <Check size={14} color="#ea580c" style={{ flexShrink: 0 }} />}
                 </button>
-                {managing && renamingId !== ws.id && (
-                  <>
+                {renamingId !== ws.id && (
+                  <span className="ws-row-actions" style={{ display: 'inline-flex', flexShrink: 0 }}>
                     <button
                       onClick={() => {
                         setRenamingId(ws.id);
@@ -214,56 +210,59 @@ export function WorkspaceSwitcher({
                     <button onClick={() => onDelete(ws)} title={`Delete ${ws.name}`} style={{ ...iconBtn(), color: '#ef4444' }}>
                       <Trash2 size={13} />
                     </button>
-                  </>
+                  </span>
                 )}
               </div>
             </div>
           ))}
 
-          <div style={{ borderTop: '1px solid #f5f5f4', marginTop: 4, paddingTop: 8 }}>
-            {!managing ? (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flex: 1 }}>
-                  <input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') submitCreate(); }}
-                    placeholder="New workspace…"
-                    style={{ flex: 1, minWidth: 90, fontSize: 13, border: '1.5px solid #e7e5e4', borderRadius: 8, padding: '6px 9px', outline: 'none' }}
-                  />
-                </div>
-                <button onClick={submitCreate} disabled={busy || !newName.trim()} title="Create workspace" style={{ border: 'none', background: '#f97316', color: 'white', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', display: 'inline-flex', flexShrink: 0 }}>
-                  <Plus size={14} />
-                </button>
-              </div>
-            ) : null}
-            {!managing && newName.trim() && (
-              <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setNewColor(c)}
-                    title={c}
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 999,
-                      background: c,
-                      border: 'none',
-                      cursor: 'pointer',
-                      outline: newColor === c ? '2px solid #1c1917' : 'none',
-                      outlineOffset: 1,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => setManaging((m) => !m)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a8a29e', fontSize: 12, fontWeight: 600, padding: '8px 4px 2px', width: '100%', textAlign: 'center' }}
-            >
-              {managing ? 'Done managing' : workspaces.length > 0 ? 'Manage workspaces' : 'Pick a color, then + to create'}
-            </button>
+          <div style={{ position: 'sticky', bottom: 0, background: 'white', borderTop: '1px solid #f5f5f4', margin: '4px -6px -6px', padding: '10px 12px 8px' }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') submitCreate(); }}
+                placeholder="New workspace…"
+                style={{ flex: 1, minWidth: 0, height: 38, boxSizing: 'border-box', fontSize: 13, border: '1.5px solid #e7e5e4', borderRadius: 10, padding: '0 10px', outline: 'none' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#f97316'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#e7e5e4'; }}
+              />
+              <button
+                onClick={submitCreate}
+                disabled={busy || !newName.trim()}
+                title="Create workspace"
+                style={{
+                  width: 38, height: 38, flexShrink: 0, border: 'none',
+                  background: !newName.trim() ? '#f5f5f4' : '#f97316',
+                  color: !newName.trim() ? '#a8a29e' : 'white',
+                  borderRadius: 10, cursor: !newName.trim() ? 'default' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: '#a8a29e', marginRight: 2 }}>Color</span>
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setNewColor(c)}
+                  title={c}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    background: c,
+                    border: 'none',
+                    cursor: 'pointer',
+                    outline: newColor === c ? '2px solid #1c1917' : '2px solid transparent',
+                    outlineOffset: 1,
+                    padding: 0,
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}

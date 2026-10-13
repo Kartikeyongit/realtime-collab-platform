@@ -1034,6 +1034,21 @@ body.editor-focus .ProseMirror .focus-dim {
   border-bottom: 1px solid #f5f5f4;
 }
 
+/* Workspace rows: rename/delete reveal on hover (always visible on touch) */
+.ws-row .ws-row-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ws-row:hover .ws-row-actions,
+.ws-row:focus-within .ws-row-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ws-row .ws-row-actions {
+    opacity: 1;
+  }
+}
+
 /* Extra small devices */
 @media (max-width: 480px) {
   /* Document header metadata: hide presence + extra info */
