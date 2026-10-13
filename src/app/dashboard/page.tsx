@@ -490,7 +490,7 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gap: 8, opacity: refetching ? 0.6 : 1, transition: 'opacity 0.15s' }}>
           {documents.map((doc) => (
             <div key={doc.id} onClick={() => router.push(`/documents/${doc.id}`)} className="card" style={{ padding: '12px 16px', cursor: 'pointer' }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div className="doc-row" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <span style={{ width: 34, height: 34, borderRadius: 10, background: doc.isPinned ? '#fff7ed' : '#fafaf9', border: '1.5px solid #e7e5e4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: doc.isPinned ? '#f97316' : '#a8a29e', flexShrink: 0 }}>
                   {doc.isPinned ? <Pin size={16} /> : <FileText size={16} />}
                 </span>
@@ -514,6 +514,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
+                <div className="doc-row-controls" style={{ display: 'flex', gap: 2, alignItems: 'center', flexShrink: 0 }}>
                 <button onClick={(e) => togglePin(doc, e)} title={doc.isPinned ? 'Unpin' : 'Pin'} style={{ border: 'none', background: 'none', cursor: 'pointer', color: doc.isPinned ? '#f97316' : '#d6d3d1', padding: 6 }}>
                   <Pin size={17} fill={doc.isPinned ? 'currentColor' : 'none'} />
                 </button>
@@ -548,6 +549,7 @@ export default function DashboardPage() {
                     />
                   </span>
                 )}
+                </div>
               </div>
             </div>
           ))}

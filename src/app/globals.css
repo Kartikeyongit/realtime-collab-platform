@@ -40,6 +40,8 @@ body {
   -webkit-font-smoothing: antialiased;
   line-height: 1.6;
   letter-spacing: -0.01em;
+  /* Page-level horizontal scroll is never wanted; clip keeps sticky working. */
+  overflow-x: clip;
 }
 
 ::selection {
@@ -933,6 +935,21 @@ body.editor-focus .ProseMirror .focus-dim {
 @media (max-width: 940px) {
   .nav-hide-mid {
     display: none !important;
+  }
+}
+
+/* Narrow dashboard: doc rows wrap into title + full-width controls line so
+   the page never overflows the viewport horizontally. */
+@media (max-width: 640px) {
+  .doc-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .doc-row-controls {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    row-gap: 6px;
   }
 }
 
