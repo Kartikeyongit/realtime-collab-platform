@@ -410,7 +410,7 @@ export default function DashboardPage() {
         <button className={`btn btn-sm dash-filter ${favOnly ? '' : 'btn-secondary'}`} onClick={() => { setFavOnly(!favOnly); setPage(1); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 14px' }}>
           <Star size={15} fill={favOnly ? 'currentColor' : 'none'} /> Favorites
         </button>
-        {(folderFilter || tagFilter || favOnly || debouncedSearch) && (
+        {(folderFilter || tagFilter || debouncedSearch) && (
           <button className="btn btn-ghost btn-sm dash-filter" onClick={() => { setFolderFilter(''); setTagFilter(''); setFavOnly(false); setSearch(''); setPage(1); }} style={{ padding: '0 14px' }}>
             <X size={14} /> Clear
           </button>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
-                <div className="doc-row-controls" style={{ display: 'flex', gap: 2, alignItems: 'center', flexShrink: 0 }}>
+                <div className="doc-row-controls" style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                 <button onClick={(e) => togglePin(doc, e)} title={doc.isPinned ? 'Unpin' : 'Pin'} style={{ border: 'none', background: 'none', cursor: 'pointer', color: doc.isPinned ? '#f97316' : '#d6d3d1', padding: 6 }}>
                   <Pin size={17} fill={doc.isPinned ? 'currentColor' : 'none'} />
                 </button>
