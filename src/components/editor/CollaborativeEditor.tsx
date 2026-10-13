@@ -106,7 +106,15 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
           localStorage.removeItem(queueKey);
         } catch {}
         // Best-effort memory refresh (no-op unless workspace indexed once).
-        void maybeAutoIndex(documentIdRef.current, content);
+        // Deferred to a full idle period: embedding runs ONNX inference on
+        // the main thread and must never compete with typing.
+        maybeAutoIndex(documentIdRef.current, () => {
+          try {
+            return editorRef.current?.getJSON() ?? null;
+          } catch {
+            return null;
+          }
+        });
       } catch (error) {
         console.error('Save failed:', error);
         try {
