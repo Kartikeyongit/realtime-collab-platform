@@ -116,9 +116,9 @@ export default function GraphPage() {
           <Minus size={14} />
         </button>
       </div>
-      <p style={{ color: '#78716c', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <MousePointerClick size={13} />
-        <span>Click a neighbor to re-center · click the center to open it · type <code style={{ background: '#fff7ed', padding: '1px 6px', borderRadius: 6, color: '#c2410c' }}>[[]]</code> in a doc to link it.</span>
+      <p style={{ color: '#78716c', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 6, flexWrap: 'nowrap' }}>
+        <MousePointerClick size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span style={{ flex: 1, minWidth: 0 }}>Click a neighbor to re-center · click the center to open it · type <code style={{ background: '#fff7ed', padding: '1px 6px', borderRadius: 6, color: '#c2410c' }}>[[]]</code> in a doc to link it.</span>
       </p>
 
       {nodes.length === 0 ? (
