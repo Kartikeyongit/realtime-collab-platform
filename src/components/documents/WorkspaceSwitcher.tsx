@@ -202,8 +202,6 @@ export function WorkspaceSwitcher({
               ) : (
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
               )}
-              <span style={{ fontSize: 11, color: '#a8a29e', flexShrink: 0 }}>{ws._count?.documents ?? 0}</span>
-              {active && renamingId !== ws.id && <Check size={14} color="#ea580c" style={{ flexShrink: 0 }} />}
               {renamingId !== ws.id && (
                 <span className="ws-row-actions" style={{ display: 'inline-flex', flexShrink: 0 }}>
                   <button
@@ -222,6 +220,7 @@ export function WorkspaceSwitcher({
                   </button>
                 </span>
               )}
+              <span style={{ fontSize: 11, color: '#a8a29e', flexShrink: 0 }}>{ws._count?.documents ?? 0}</span>
             </div>
             );
           })}
