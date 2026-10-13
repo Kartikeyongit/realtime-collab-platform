@@ -45,7 +45,9 @@ export const EmojiSuggestion = Extension.create({
               const active = i === selected;
               btn.style.background = active ? '#fff7ed' : 'transparent';
               btn.style.outline = active ? '1.5px solid #fed7aa' : 'none';
-              if (active) btn.scrollIntoView({ block: 'nearest' });
+              try {
+                if (active) btn.scrollIntoView({ block: 'nearest' });
+              } catch {}
             });
           };
 
@@ -121,7 +123,7 @@ export const EmojiSuggestion = Extension.create({
               build(props);
               const { clientRect } = props;
               if (!clientRect || !listEl) return;
-              popup = tippy('body', {
+              popup = tippy(document.body, {
                 getReferenceClientRect: clientRect,
                 appendTo: () => document.body,
                 content: listEl,
@@ -143,7 +145,7 @@ export const EmojiSuggestion = Extension.create({
               if (!popup) {
                 const { clientRect } = props;
                 if (!clientRect) return;
-                popup = tippy('body', {
+                popup = tippy(document.body, {
                   getReferenceClientRect: clientRect,
                   appendTo: () => document.body,
                   content: listEl,

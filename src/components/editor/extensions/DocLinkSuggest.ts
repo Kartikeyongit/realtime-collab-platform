@@ -68,7 +68,9 @@ export const DocLinkSuggest = Extension.create({
               const active = i === selected;
               btn.style.background = active ? '#fff7ed' : 'transparent';
               btn.style.outline = active ? '1.5px solid #fed7aa' : 'none';
-              if (active) btn.scrollIntoView({ block: 'nearest' });
+              try {
+                if (active) btn.scrollIntoView({ block: 'nearest' });
+              } catch {}
             });
           };
 
@@ -162,7 +164,7 @@ export const DocLinkSuggest = Extension.create({
               if (!listEl) return;
               const { clientRect } = props;
               if (!clientRect) return;
-              popup = tippy('body', {
+              popup = tippy(document.body, {
                 getReferenceClientRect: clientRect,
                 appendTo: () => document.body,
                 content: listEl,
@@ -187,7 +189,7 @@ export const DocLinkSuggest = Extension.create({
               if (!popup) {
                 const { clientRect } = props;
                 if (!clientRect) return;
-                popup = tippy('body', {
+                popup = tippy(document.body, {
                   getReferenceClientRect: clientRect,
                   appendTo: () => document.body,
                   content: listEl,
