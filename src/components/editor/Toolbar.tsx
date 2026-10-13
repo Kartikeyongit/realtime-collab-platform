@@ -336,23 +336,35 @@ export function Toolbar({ editor }: ToolbarProps) {
 
   // Typewriter scrolling: keep the cursor line near 38% viewport while focused.
   // Gated on isFocused so remote collaborators' edits never yank your view.
+  // rAF-throttled with a dead zone: coordsAtPos forces layout, so at most one
+  // recenter per frame, and sub-4px drift (caret blink, IME) doesn't scroll.
   useEffect(() => {
     if (!editor || !focusMode) return;
+    let raf = 0;
     const center = () => {
-      try {
-        if (!editor.isFocused || !editor.isEditable) return;
-        const container = document.getElementById('editor-container');
-        if (!container) return;
-        const { from } = editor.state.selection;
-        const coords = editor.view.coordsAtPos(from);
-        const rect = container.getBoundingClientRect();
-        const targetY = rect.top + container.clientHeight * 0.38;
-        container.scrollTop += coords.top - targetY;
-      } catch {}
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        try {
+          if (!editor.isFocused || !editor.isEditable) return;
+          const container = document.getElementById('editor-container');
+          if (!container) return;
+          const { from } = editor.state.selection;
+          const coords = editor.view.coordsAtPos(from);
+          const rect = container.getBoundingClientRect();
+          const targetY = rect.top + container.clientHeight * 0.38;
+          const delta = coords.top - targetY;
+          if (Math.abs(delta) >= 4) container.scrollTop += delta;
+        } catch {}
+      });
     };
     editor.on('selectionUpdate', center);
     editor.on('update', center);
-    return () => { editor.off('selectionUpdate', center); editor.off('update', center); };
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      editor.off('selectionUpdate', center);
+      editor.off('update', center);
+    };
   }, [editor, focusMode]);
 
   if (!editor) return null;

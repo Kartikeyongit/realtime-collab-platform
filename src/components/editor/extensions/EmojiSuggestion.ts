@@ -49,6 +49,23 @@ export const EmojiSuggestion = Extension.create({
             });
           };
 
+          const hide = () => {
+            popup?.destroy();
+            popup = null;
+            listEl = null;
+          };
+
+          // Deterministic dismissal: if the trigger is gone after an edit key,
+          // close regardless of what the matcher reports.
+          const textBeforeCursor = (view: any): string => {
+            try {
+              const { $from } = view.state.selection;
+              return $from.parent.textBetween(0, $from.parentOffset);
+            } catch {
+              return '';
+            }
+          };
+
           const build = (props: any) => {
             items = props.items as EmojiEntry[];
             selected = 0;
@@ -118,8 +135,15 @@ export const EmojiSuggestion = Extension.create({
             },
             onKeyDown: (props: any) => {
               if (props.event.key === 'Escape') {
-                popup?.hide();
+                hide();
                 return true;
+              }
+              if (props.event.key === 'Backspace' || props.event.key === 'Delete') {
+                const view = props.view;
+                setTimeout(() => {
+                  if (!textBeforeCursor(view).includes(':')) hide();
+                }, 0);
+                return false;
               }
               if (props.event.key === 'ArrowDown') {
                 selected = (selected + 1) % Math.max(items.length, 1);
