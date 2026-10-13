@@ -42,7 +42,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'journal',
     title: 'A journal that keeps itself',
-    body: 'The week strip opens each day’s note — green dots mark written days. Hit Today and just write.',
+    body: 'The month calendar opens any day’s note — green dots mark written days. Hit Today and just write.',
     target: '[data-tour="week"]',
     placement: 'below',
   },

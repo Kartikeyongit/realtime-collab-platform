@@ -13,7 +13,7 @@ import { GuidedTour } from '@/components/onboarding/GuidedTour';
 import { TOUR_REPLAY_KEY, isTourDone } from '@/components/onboarding/tourSteps';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterSelect } from '@/components/ui/FilterSelect';
-import { WeekStrip } from '@/components/documents/WeekStrip';
+import { MonthStrip } from '@/components/documents/MonthStrip';
 import { MarkdownImport } from '@/components/documents/MarkdownImport';
 import { WorkspaceSwitcher, type Workspace } from '@/components/documents/WorkspaceSwitcher';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
@@ -357,8 +357,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="card" style={{ padding: '12px 16px', marginBottom: 12 }} data-tour="week">
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>This week</div>
-        <WeekStrip />
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>This month</div>
+        <MonthStrip />
       </div>
 
       {barVisible && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
