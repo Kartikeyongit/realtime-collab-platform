@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useCallback, useRef, useMemo, useState, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -27,6 +27,9 @@ import { DocLinkSuggest } from './extensions/DocLinkSuggest';
 import { Toolbar } from './Toolbar';
 import { useYjsCollaboration } from '@/hooks/useYjsCollaboration';
 import { maybeAutoIndex } from '@/lib/ai/autoIndex';
+import { perfStats, resetPerfStats, vectorsEqual } from '@/lib/perf';
+import { PerfHud } from './PerfHud';
+import * as Y from 'yjs';
 import axios from 'axios';
 
 interface CollaborativeEditorProps {
@@ -46,11 +49,19 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     // Reset per document so navigating doc→doc without remount still loads content.
     useEffect(() => {
       initialContentLoaded.current = false;
+      lastSavedVectorRef.current = null;
+      resetPerfStats();
     }, [documentId]);
     const { yDoc, provider, awareness, connected, synced, isEmpty, userInfo } = useYjsCollaboration(documentId);
+    const yDocRef = useRef(yDoc);
+    yDocRef.current = yDoc;
+    const lastSavedVectorRef = useRef<Uint8Array | null>(null);
 
     const isDirtyRef = useRef(false);
     const offlineBannerRef = useRef(false);
+    const [showPerf] = useState(
+      () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('perf')
+    );
 
     const saveDocument = useCallback(async () => {
       if (!editorRef.current) return;
@@ -60,6 +71,20 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
       } catch {
         return;
       }
+
+      // Skip when the Yjs clock hasn't advanced since the last save: avoids a
+      // full stringify + PUT for unchanged content (idle interval ticks, or
+      // saves triggered without real edits). Yjs realtime persistence is
+      // unaffected — this only gates the durable REST snapshot.
+      let vector: Uint8Array | null = null;
+      try {
+        vector = Y.encodeStateVector(yDocRef.current);
+        if (lastSavedVectorRef.current && vectorsEqual(vector, lastSavedVectorRef.current)) {
+          isDirtyRef.current = false;
+          perfStats.skipped++;
+          return;
+        }
+      } catch {}
 
       // Offline queue ($0): stash last content locally when save fails / offline.
       const queueKey = `offline-queue-${documentIdRef.current}`;
@@ -71,8 +96,12 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
           isDirtyRef.current = true;
           return;
         }
+        const t0 = performance.now();
         await axios.put(`/api/documents/${documentIdRef.current}`, { content });
+        perfStats.lastPutMs = performance.now() - t0;
+        perfStats.saves++;
         isDirtyRef.current = false;
+        if (vector) lastSavedVectorRef.current = vector;
         try {
           localStorage.removeItem(queueKey);
         } catch {}
@@ -89,12 +118,17 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
     const debouncedSave = useCallback(() => {
       isDirtyRef.current = true;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => saveDocument(), 1000);
+      // 2.5s trailing edge: Yjs carries realtime durability, so the REST
+      // snapshot can trail typing instead of stringifying mid-burst.
+      saveTimeoutRef.current = setTimeout(() => saveDocument(), 2500);
     }, [saveDocument]);
 
     useEffect(() => {
       const fragment = yDoc.getXmlFragment('default');
-      const observer = () => debouncedSave();
+      const observer = () => {
+        perfStats.updates++;
+        debouncedSave();
+      };
       fragment.observeDeep(observer);
       return () => { fragment.unobserveDeep(observer); };
     }, [yDoc, debouncedSave]);
@@ -238,6 +272,7 @@ export const CollaborativeEditor = forwardRef<any, CollaborativeEditorProps>(
 
     return (
       <div className="min-h-screen pb-4 editor-wrapper">
+        {showPerf && <PerfHud />}
         <div className="toolbar-area">
           <Toolbar editor={editor} />
         </div>
