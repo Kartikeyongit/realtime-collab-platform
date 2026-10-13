@@ -194,16 +194,25 @@ export default function DashboardPage() {
       })
       .catch(() => {});
   }, [status]);
-  // Shimmer on return: coming back from another tab/window/app shows the bar
-  // for a fixed beat while fresh data loads — even if the fetch is instant.
+  // Shimmer on return — but only after a genuinely long absence. Brief
+  // tab flicks shouldn't flash the bar or refetch: data can't be stale yet.
   // visibilitychange covers mobile/app switches where window focus may not fire;
   // both fire on desktop returns, so throttle to one refresh per window.
+  const LONG_AWAY_MS = 60 * 60 * 1000;
   const lastReturnRef = useRef(0);
+  const wentAwayAtRef = useRef<number | null>(null);
   useEffect(() => {
+    const markAway = () => {
+      wentAwayAtRef.current = Date.now();
+    };
     const onReturn = () => {
       if (status !== 'authenticated' || firstLoad.current) return;
       const now = Date.now();
       if (now - lastReturnRef.current < 2500) return;
+      const awayMs = wentAwayAtRef.current == null ? 0 : now - wentAwayAtRef.current;
+      wentAwayAtRef.current = null;
+      // Came straight back — nothing to refresh, no shimmer.
+      if (awayMs < LONG_AWAY_MS) return;
       lastReturnRef.current = now;
       if (barTimer.current) clearTimeout(barTimer.current);
       setBarVisible(true);
@@ -213,10 +222,15 @@ export default function DashboardPage() {
       });
       fetchMeta();
     };
-    const onVisibility = () => { if (!document.hidden) onReturn(); };
+    const onVisibility = () => {
+      if (document.hidden) markAway();
+      else onReturn();
+    };
+    window.addEventListener('blur', markAway);
     window.addEventListener('focus', onReturn);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      window.removeEventListener('blur', markAway);
       window.removeEventListener('focus', onReturn);
       document.removeEventListener('visibilitychange', onVisibility);
       if (barTimer.current) clearTimeout(barTimer.current);
