@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
-import { Share2, Folder as FolderIcon, Unlink, Plus, Minus } from 'lucide-react';
+import { Share2, Folder as FolderIcon, Unlink, Plus, Minus, MousePointerClick } from 'lucide-react';
 import { showError } from '@/lib/toast';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
@@ -30,6 +30,13 @@ function colorFor(folderId: string | null): string {
   return FOLDER_COLORS[h % FOLDER_COLORS.length];
 }
 
+function tint(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function shortTitle(title: string, max = 18): string {
   return title.length > max ? title.slice(0, max - 1) + '…' : title;
 }
@@ -41,6 +48,7 @@ export default function GraphPage() {
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(true);
   const [centerId, setCenterId] = useState<string | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
@@ -85,11 +93,22 @@ export default function GraphPage() {
     return { node: n, x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) };
   });
 
+  const dimmed = (id: string) => hoverId !== null && hoverId !== id && hoverId !== centerId;
+
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px' }}>
+      <style>{`
+        .graph-node { transition: transform 0.15s ease, opacity 0.2s ease; transform-box: fill-box; transform-origin: center; }
+        .graph-node:hover { transform: scale(1.1); }
+        .graph-flow { stroke-dasharray: 2 10; animation: graphFlow 1.1s linear infinite; }
+        @keyframes graphFlow { to { stroke-dashoffset: -12; } }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <Share2 size={20} color="#f97316" />
         <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', marginRight: 'auto' }}>Graph</h1>
+        <span style={{ fontSize: 12, color: '#a8a29e', fontWeight: 600 }}>
+          {nodes.length} doc{nodes.length === 1 ? '' : 's'} · {edges.length} link{edges.length === 1 ? '' : 's'}
+        </span>
         <button className="btn btn-secondary btn-sm" onClick={() => setZoom((z) => Math.min(1.8, +(z + 0.2).toFixed(1)))} title="Zoom in">
           <Plus size={14} />
         </button>
@@ -97,8 +116,9 @@ export default function GraphPage() {
           <Minus size={14} />
         </button>
       </div>
-      <p style={{ color: '#78716c', fontSize: 13, marginBottom: 16 }}>
-        How your documents link together. Click any node to re-center — type <code style={{ background: '#fff7ed', padding: '1px 6px', borderRadius: 6, color: '#c2410c' }}>[[]]</code> in a doc to link it.
+      <p style={{ color: '#78716c', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <MousePointerClick size={13} />
+        <span>Click a neighbor to re-center · click the center to open it · type <code style={{ background: '#fff7ed', padding: '1px 6px', borderRadius: 6, color: '#c2410c' }}>[[]]</code> in a doc to link it.</span>
       </p>
 
       {nodes.length === 0 ? (
@@ -107,38 +127,85 @@ export default function GraphPage() {
         </div>
       ) : (
         <>
-          <div className="card" style={{ padding: 8, marginBottom: 12, overflow: 'hidden' }}>
+          <div className="card" style={{ padding: 8, marginBottom: 12, overflow: 'hidden', background: '#fffdf9' }}>
             <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label="Document link graph">
+              <defs>
+                <radialGradient id="graph-center" cx="35%" cy="30%" r="80%">
+                  <stop offset="0%" stopColor="#fb923c" />
+                  <stop offset="100%" stopColor="#ea580c" />
+                </radialGradient>
+                <filter id="graph-glow" x="-60%" y="-60%" width="220%" height="220%">
+                  <feDropShadow dx="0" dy="3" stdDeviation="7" floodColor="#f97316" floodOpacity="0.45" />
+                </filter>
+                <filter id="graph-soft" x="-60%" y="-60%" width="220%" height="220%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#1c1917" floodOpacity="0.12" />
+                </filter>
+                <pattern id="graph-dots" width="26" height="26" patternUnits="userSpaceOnUse">
+                  <circle cx="1.5" cy="1.5" r="1.5" fill="#f5f0e8" />
+                </pattern>
+              </defs>
+
+              <rect width={W} height={H} fill="url(#graph-dots)" />
+
               {placed.map(({ node, x, y }) => (
-                <line key={`e-${node.id}`} x1={cx} y1={cy} x2={x} y2={y} stroke="#fed7aa" strokeWidth={1.5} />
-              ))}
-              {placed.map(({ node, x, y }) => (
-                <g
-                  key={node.id}
-                  onClick={() => setCenterId(node.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <title>{node.title}</title>
-                  <circle cx={x} cy={y} r={16 + Math.min(node.links, 6) * 2} fill="white" stroke={colorFor(node.folderId)} strokeWidth={2.5} />
-                  <text x={x} y={y + 34} textAnchor="middle" fontSize={12} fontWeight={600} fill="#44403c">
-                    {shortTitle(node.title)}
-                  </text>
-                  {node.folderName && (
-                    <text x={x} y={y + 48} textAnchor="middle" fontSize={10} fill="#a8a29e">
-                      {shortTitle(node.folderName, 14)}
-                    </text>
-                  )}
+                <g key={`e-${node.id}`} opacity={dimmed(node.id) ? 0.2 : 1} style={{ transition: 'opacity 0.2s ease' }}>
+                  <line x1={cx} y1={cy} x2={x} y2={y} stroke="#ffe3c2" strokeWidth={3} strokeLinecap="round" />
+                  <line x1={cx} y1={cy} x2={x} y2={y} stroke="#f97316" strokeWidth={1.6} strokeLinecap="round" className="graph-flow" opacity={0.75} />
                 </g>
               ))}
+
+              {placed.map(({ node, x, y }) => {
+                const c = colorFor(node.folderId);
+                const r = 19 + Math.min(node.links, 6) * 2;
+                return (
+                  <g
+                    key={node.id}
+                    className="graph-node"
+                    onClick={() => setCenterId(node.id)}
+                    onMouseEnter={() => setHoverId(node.id)}
+                    onMouseLeave={() => setHoverId(null)}
+                    opacity={dimmed(node.id) ? 0.35 : 1}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <title>{node.title}</title>
+                    <circle cx={x} cy={y} r={r} fill={tint(c, 0.14)} stroke={c} strokeWidth={2.5} filter="url(#graph-soft)" />
+                    <text x={x} y={y + 6} textAnchor="middle" fontSize={16} fontWeight={700} fill={c}>
+                      {node.title.charAt(0).toUpperCase() || '•'}
+                    </text>
+                    <text x={x} y={y + r + 16} textAnchor="middle" fontSize={12} fontWeight={600} fill="#44403c">
+                      {shortTitle(node.title)}
+                    </text>
+                    {node.folderName ? (
+                      <text x={x} y={y + r + 30} textAnchor="middle" fontSize={10} fill="#a8a29e">
+                        {shortTitle(node.folderName, 14)}
+                      </text>
+                    ) : (
+                      <text x={x} y={y + r + 30} textAnchor="middle" fontSize={10} fill="#d6d3d1">
+                        {node.links} link{node.links === 1 ? '' : 's'}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+
               {neighborhood.center && (
-                <g onClick={() => router.push(`/documents/${neighborhood.center!.id}`)} style={{ cursor: 'pointer' }}>
-                  <title>{`${neighborhood.center.title} (open)`}</title>
-                  <circle cx={cx} cy={cy} r={26} fill="#f97316" />
-                  <text x={cx} y={cy + 5} textAnchor="middle" fontSize={16} fontWeight={700} fill="white">
+                <g
+                  onClick={() => router.push(`/documents/${neighborhood.center!.id}`)}
+                  onMouseEnter={() => setHoverId(neighborhood.center!.id)}
+                  onMouseLeave={() => setHoverId(null)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <title>{`${neighborhood.center.title} (click to open)`}</title>
+                  <circle cx={cx} cy={cy} r={30} fill="none" stroke="#fed7aa" strokeWidth={2}>
+                    <animate attributeName="r" values="30;42" dur="2.4s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.8;0" dur="2.4s" repeatCount="indefinite" />
+                  </circle>
+                  <circle cx={cx} cy={cy} r={27} fill="url(#graph-center)" filter="url(#graph-glow)" />
+                  <text x={cx} y={cy + 7} textAnchor="middle" fontSize={20} fontWeight={700} fill="white">
                     {neighborhood.center.title.charAt(0).toUpperCase() || '•'}
                   </text>
-                  <text x={cx} y={cy + 46} textAnchor="middle" fontSize={13} fontWeight={700} fill="#1c1917">
-                    {shortTitle(neighborhood.center.title, 24)}
+                  <text x={cx} y={cy + 50} textAnchor="middle" fontSize={14} fontWeight={700} fill="#1c1917">
+                    {shortTitle(neighborhood.center.title, 26)}
                   </text>
                 </g>
               )}
