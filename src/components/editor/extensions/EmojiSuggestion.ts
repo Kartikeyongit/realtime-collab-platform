@@ -1,5 +1,6 @@
 import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
+import { PluginKey } from '@tiptap/pm/state';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
 import { searchEmojis, recordRecentEmoji, type EmojiEntry } from '../emojiData';
 
@@ -13,6 +14,9 @@ export const EmojiSuggestion = Extension.create({
   addProseMirrorPlugins() {
     return [
       Suggestion({
+        // Unique key: DocLinkSuggest registers its own Suggestion instance,
+        // and ProseMirror rejects two plugins sharing the default key.
+        pluginKey: new PluginKey('emojiSuggestion'),
         editor: this.editor,
         char: ':',
         allowSpaces: false,
