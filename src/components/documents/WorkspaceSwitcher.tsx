@@ -171,50 +171,60 @@ export function WorkspaceSwitcher({
             {value === 'none' && <Check size={14} color="#ea580c" style={{ marginLeft: 'auto' }} />}
           </button>
 
-          {workspaces.map((ws) => (
-            <div key={ws.id} className="ws-row">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <button onClick={() => pick(ws.id)} style={{ ...rowStyle(value === ws.id), flex: 1, minWidth: 0 }} title={`${ws.name} (${ws._count?.documents ?? 0} docs)`}>
-                  <Dot color={ws.color} />
-                  {renamingId === ws.id ? (
-                    <input
-                      autoFocus
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') submitRename(ws.id);
-                        if (e.key === 'Escape') setRenamingId(null);
-                      }}
-                      onBlur={() => submitRename(ws.id)}
-                      style={{ flex: 1, minWidth: 0, fontSize: 13, border: '1.5px solid #f97316', borderRadius: 6, padding: '2px 6px', outline: 'none' }}
-                    />
-                  ) : (
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
-                  )}
-                  <span style={{ fontSize: 11, color: '#a8a29e', flexShrink: 0 }}>{ws._count?.documents ?? 0}</span>
-                  {value === ws.id && renamingId !== ws.id && <Check size={14} color="#ea580c" style={{ flexShrink: 0 }} />}
-                </button>
-                {renamingId !== ws.id && (
-                  <span className="ws-row-actions" style={{ display: 'inline-flex', flexShrink: 0 }}>
-                    <button
-                      onClick={() => {
-                        setRenamingId(ws.id);
-                        setRenameValue(ws.name);
-                      }}
-                      title={`Rename ${ws.name}`}
-                      style={iconBtn()}
-                    >
-                      <Pencil size={13} />
-                    </button>
-                    <button onClick={() => onDelete(ws)} title={`Delete ${ws.name}`} style={{ ...iconBtn(), color: '#ef4444' }}>
-                      <Trash2 size={13} />
-                    </button>
-                  </span>
-                )}
-              </div>
+          {workspaces.map((ws) => {
+            const active = value === ws.id;
+            return (
+            <div
+              key={ws.id}
+              className="ws-row"
+              role="button"
+              tabIndex={0}
+              onClick={() => { if (renamingId !== ws.id) pick(ws.id); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && renamingId !== ws.id) pick(ws.id); }}
+              title={`${ws.name} (${ws._count?.documents ?? 0} docs)`}
+              style={{ ...rowStyle(active), cursor: 'pointer' }}
+            >
+              <Dot color={ws.color} />
+              {renamingId === ws.id ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') submitRename(ws.id);
+                    if (e.key === 'Escape') setRenamingId(null);
+                  }}
+                  onBlur={() => submitRename(ws.id)}
+                  style={{ flex: 1, minWidth: 0, fontSize: 13, border: '1.5px solid #f97316', borderRadius: 6, padding: '2px 6px', outline: 'none' }}
+                />
+              ) : (
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
+              )}
+              <span style={{ fontSize: 11, color: '#a8a29e', flexShrink: 0 }}>{ws._count?.documents ?? 0}</span>
+              {active && renamingId !== ws.id && <Check size={14} color="#ea580c" style={{ flexShrink: 0 }} />}
+              {renamingId !== ws.id && (
+                <span className="ws-row-actions" style={{ display: 'inline-flex', flexShrink: 0 }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingId(ws.id);
+                      setRenameValue(ws.name);
+                    }}
+                    title={`Rename ${ws.name}`}
+                    style={iconBtn()}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(ws); }} title={`Delete ${ws.name}`} style={{ ...iconBtn(), color: '#ef4444' }}>
+                    <Trash2 size={13} />
+                  </button>
+                </span>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           <div style={{ position: 'sticky', bottom: 0, background: 'white', borderTop: '1px solid #f5f5f4', margin: '4px -6px -6px', padding: '10px 12px 8px' }}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
