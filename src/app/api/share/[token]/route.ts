@@ -19,6 +19,7 @@ export async function POST(
         documentId: true,
         password: true,
         expiresAt: true,
+        role: true,
         document: { select: { title: true, ownerId: true } },
       },
     });
@@ -45,6 +46,7 @@ export async function POST(
       documentId: link.documentId,
       documentTitle: link.document.title,
       expiresAt: link.expiresAt,
+      role: link.role ?? 'editor',
     });
   } catch (error) {
     console.error('Share link error:', error);

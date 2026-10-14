@@ -28,6 +28,9 @@ export default function SharedPage() {
       if (data.needsPassword) {
         setNeedsPassword(true);
         setDocumentTitle(data.documentTitle);
+      } else if (data.role === 'viewer') {
+        // Read-only links get the public page, never the editor.
+        router.push(`/s/${token}`);
       } else {
         const expires = data.expiresAt ? new Date(data.expiresAt).toUTCString() : '';
         document.cookie = `share_${data.documentId}=${token}${expires ? '; expires=' + expires : '; max-age=2592000'}; path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;

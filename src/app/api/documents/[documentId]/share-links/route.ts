@@ -38,10 +38,15 @@ export async function POST(
   const { prisma } = await import('@/lib/prisma');
   const { hashPassword } = await import('@/lib/password');
 
+  // New links default to viewer (read-only public page); editor keeps the
+  // legacy full-app behavior. Existing rows default to editor via schema.
+  const role = body.role === 'editor' ? 'editor' : 'viewer';
+
   const link = await prisma.shareLink.create({
     data: {
       documentId: params.documentId,
       token,
+      role,
       password: body.password ? hashPassword(body.password) : null,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
     },

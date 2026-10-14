@@ -24,9 +24,10 @@ export async function checkDocumentAccess(
     if (shareToken?.value) {
       const link = await prisma.shareLink.findUnique({
         where: { token: shareToken.value },
-        select: { documentId: true, expiresAt: true },
+        select: { documentId: true, expiresAt: true, role: true },
       });
-      if (link && link.documentId === documentId && (!link.expiresAt || new Date(link.expiresAt) > new Date())) {
+      // Viewer links never satisfy elevated requirements.
+      if (link && link.role !== 'viewer' && link.documentId === documentId && (!link.expiresAt || new Date(link.expiresAt) > new Date())) {
         return { allowed: true };
       }
     }
@@ -44,9 +45,10 @@ export async function checkDocumentAccess(
   if (shareToken?.value) {
     const link = await prisma.shareLink.findUnique({
       where: { token: shareToken.value },
-      select: { documentId: true, expiresAt: true },
+      select: { documentId: true, expiresAt: true, role: true },
     });
     if (link && link.documentId === documentId && (!link.expiresAt || new Date(link.expiresAt) > new Date())) {
+      if (requiredRole === 'editor' && link.role === 'viewer') return { allowed: false };
       return { allowed: true };
     }
   }

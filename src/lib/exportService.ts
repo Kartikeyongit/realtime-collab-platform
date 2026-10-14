@@ -58,7 +58,7 @@ export class ExportService {
       sections: [{ children }],
     });
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${filename}.docx`);
+    saveAs(blob, `${ExportService.safeFilename(filename)}.docx`);
   }
 
   // ── Convert TipTap nodes → docx Paragraph / Table ──
@@ -314,18 +314,44 @@ export class ExportService {
 
   private static twip(inches: number) { return Math.round(inches * 1440); }
 
+  /** Filesystem-safe filename (Windows/macOS illegal chars, dots, length). */
+  static safeFilename(title: string, fallback = 'document'): string {
+    const clean = (title || '')
+      .replace(/[\\/:*?"<>|]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^\.+/, '')
+      .slice(0, 100)
+      .trim();
+    return clean || fallback;
+  }
+
+  /**
+   * Replace rendered task checkboxes with [x]/[ ] markers so Markdown and
+   * plain-text exports keep checked state (Turndown/innerText drop inputs).
+   */
+  static withTaskMarkers(html: string): string {
+    if (!html || !html.includes('checkbox')) return html;
+    return html.replace(/<input\b[^>]*type=["']?checkbox["']?[^>]*>/gi, (tag) => {
+      const checked = /(?:^|\s)checked(?:\s|=|>|\/)/i.test(tag);
+      return checked ? '[x] ' : '[ ] ';
+    });
+  }
+
   // ── Markdown ──
   static toMarkdown(html: string, filename: string) {
-    saveAs(new Blob([new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', emDelimiter: '*' }).turndown(html)], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
+    const name = ExportService.safeFilename(filename);
+    saveAs(new Blob([new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', emDelimiter: '*' }).turndown(ExportService.withTaskMarkers(html))], { type: 'text/markdown;charset=utf-8' }), `${name}.md`);
   }
 
   // ── HTML ──
   static toHTML(html: string, filename: string) {
-    saveAs(new Blob([`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${filename}</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}h1{font-size:2em;margin-top:1.5em}h2{font-size:1.5em;margin-top:1.3em}h3{font-size:1.25em;margin-top:1.1em}table{border-collapse:collapse;width:100%;margin:1em 0}td,th{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}img{max-width:100%;height:auto}pre{background:#f5f5f5;padding:15px;border-radius:8px;overflow-x:auto}code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.9em}blockquote{border-left:4px solid #3b82f6;padding-left:16px;margin:1em 0;color:#666}</style></head><body>${html}</body></html>`], { type: 'text/html;charset=utf-8' }), `${filename}.html`);
+    const name = ExportService.safeFilename(filename);
+    saveAs(new Blob([`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${name}</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}h1{font-size:2em;margin-top:1.5em}h2{font-size:1.5em;margin-top:1.3em}h3{font-size:1.25em;margin-top:1.1em}table{border-collapse:collapse;width:100%;margin:1em 0}td,th{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}img{max-width:100%;height:auto}pre{background:#f5f5f5;padding:15px;border-radius:8px;overflow-x:auto}code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.9em}blockquote{border-left:4px solid #3b82f6;padding-left:16px;margin:1em 0;color:#666}</style></head><body>${html}</body></html>`], { type: 'text/html;charset=utf-8' }), `${name}.html`);
   }
 
   // ── Text ──
   static toText(text: string, filename: string) {
-    saveAs(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}.txt`);
+    saveAs(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${ExportService.safeFilename(filename)}.txt`);
   }
 }

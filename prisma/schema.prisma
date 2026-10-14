@@ -230,6 +230,8 @@ model ShareLink {
   token      String    @unique
   password   String?
   expiresAt  DateTime?
+  // viewer = read-only public page only; editor = full app access (legacy default)
+  role       String    @default("editor")
   createdAt  DateTime  @default(now())
   document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }

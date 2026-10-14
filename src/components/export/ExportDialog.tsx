@@ -64,7 +64,7 @@ export function ExportDialog({ isOpen, onClose, documentTitle, editor, addToast 
         case 'html': ExportService.toHTML(content, documentTitle); break;
         case 'txt': {
           const div = document.createElement('div');
-          div.innerHTML = content;
+          div.innerHTML = ExportService.withTaskMarkers(content);
           ExportService.toText(div.innerText, documentTitle);
           break;
         }

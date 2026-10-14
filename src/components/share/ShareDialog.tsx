@@ -9,6 +9,7 @@ interface ShareLink {
   token: string;
   password: string | null;
   expiresAt: string | null;
+  role?: string | null;
   createdAt: string;
 }
 
@@ -33,6 +34,7 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   const [showCreateLink, setShowCreateLink] = useState(false);
   const [linkPassword, setLinkPassword] = useState('');
   const [linkExpiry, setLinkExpiry] = useState('');
+  const [linkRole, setLinkRole] = useState<'viewer' | 'editor'>('viewer');
   const [creatingLink, setCreatingLink] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -78,11 +80,12 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   const createShareLink = async () => {
     setCreatingLink(true);
     try {
-      const { data } = await axios.post(`/api/documents/${documentId}/share-links`, { password: linkPassword || null, expiresAt: linkExpiry || null });
+      const { data } = await axios.post(`/api/documents/${documentId}/share-links`, { password: linkPassword || null, expiresAt: linkExpiry || null, role: linkRole });
       setShareLinks(prev => [data, ...prev]);
       setShowCreateLink(false);
       setLinkPassword('');
       setLinkExpiry('');
+      setLinkRole('viewer');
       addToast('Share link created!', 'success');
     } catch { addToast('Failed', 'error'); }
     finally { setCreatingLink(false); }
@@ -97,11 +100,21 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
   };
 
   const copyLink = async (token: string) => {
-    const link = `${window.location.origin}/shared/${token}`;
+    const link = `${window.location.origin}/s/${token}`;
     await navigator.clipboard.writeText(link);
     setCopied(token);
     addToast('Link copied!', 'success');
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const expiresIn = (iso: string): string => {
+    const ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return 'expired';
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return `${mins}m left`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 48) return `${hours}h left`;
+    return `${Math.floor(hours / 24)}d left`;
   };
 
   if (!isOpen) return null;
@@ -179,6 +192,23 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
             </div>
             {showCreateLink && (
               <div style={{ padding: '12px', background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '12px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {(['viewer', 'editor'] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setLinkRole(r)}
+                      title={r === 'viewer' ? 'Read-only public page' : 'Full access in the editor'}
+                      style={{
+                        flex: 1, fontSize: '12px', fontWeight: 600, padding: '7px 0', borderRadius: 8,
+                        border: '1.5px solid', borderColor: linkRole === r ? '#f97316' : '#e7e5e4',
+                        background: linkRole === r ? 'white' : 'transparent',
+                        color: linkRole === r ? '#c2410c' : '#78716c', cursor: 'pointer',
+                      }}
+                    >
+                      {r === 'viewer' ? 'Can view' : 'Can edit'}
+                    </button>
+                  ))}
+                </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1, position: 'relative' }}><Lock size={13} color="#a8a29e" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} /><input type="password" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="Password (optional)" className="input" style={{ paddingLeft: '32px', fontSize: '12px' }} /></div>
                   <div style={{ flex: 1, position: 'relative' }}><Clock size={13} color="#a8a29e" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} /><input type="datetime-local" value={linkExpiry} onChange={(e) => setLinkExpiry(e.target.value)} className="input" style={{ paddingLeft: '32px', fontSize: '12px' }} /></div>
@@ -195,19 +225,34 @@ export function ShareDialog({ isOpen, onClose, documentId, documentTitle, collab
               <p style={{ fontSize: '12px', color: '#a8a29e', textAlign: 'center', padding: '12px' }}>No share links yet</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {shareLinks.map((link) => (
-                  <div key={link.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '12px', background: '#fafaf9', border: '1.5px solid #f5f5f4' }}>
+                {shareLinks.map((link) => {
+                  const role = link.role === 'editor' ? 'editor' : 'viewer';
+                  const expired = link.expiresAt ? new Date(link.expiresAt) < new Date() : false;
+                  return (
+                  <div key={link.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: '12px', background: expired ? '#fef2f2' : '#fafaf9', border: '1.5px solid #f5f5f4', opacity: expired ? 0.7 : 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                       {link.password ? <Lock size={13} color="#f97316" /> : <Globe size={13} color="#22c55e" />}
                       <span style={{ fontSize: '12px', color: '#78716c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>.../{link.token.substring(0, 8)}</span>
-                      {link.expiresAt && <span title="Expires"><Clock size={11} color="#ef4444" /></span>}
+                      <span
+                        title={role === 'editor' ? 'Opens with full edit access' : 'Opens a read-only page'}
+                        style={{ fontSize: '10px', fontWeight: 700, borderRadius: 999, padding: '1px 7px', background: role === 'editor' ? '#fff7ed' : '#f0fdf4', color: role === 'editor' ? '#c2410c' : '#15803d', border: role === 'editor' ? '1px solid #fed7aa' : '1px solid #bbf7d0', flexShrink: 0 }}
+                      >
+                        {role === 'editor' ? 'Can edit' : 'Can view'}
+                      </span>
+                      {link.expiresAt && (
+                        <span title={expired ? 'Expired' : `Expires ${new Date(link.expiresAt).toLocaleString()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '10px', color: expired ? '#dc2626' : '#a8a29e', flexShrink: 0 }}>
+                          <Clock size={11} color={expired ? '#ef4444' : '#a8a29e'} />
+                          {expired ? 'expired' : expiresIn(link.expiresAt)}
+                        </span>
+                      )}
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                       <button onClick={() => copyLink(link.token)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }}>{copied === link.token ? <Check size={13} color="#22c55e" /> : <Copy size={13} />}</button>
-                      <button onClick={() => deleteShareLink(link.id)} className="btn btn-ghost btn-sm" style={{ padding: '4px', color: '#ef4444' }}><Trash2 size={13} /></button>
+                      <button onClick={() => deleteShareLink(link.id)} className="btn btn-ghost btn-sm" style={{ padding: '4px', color: '#ef4444' }} title="Revoke link"><Trash2 size={13} /></button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

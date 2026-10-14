@@ -1066,6 +1066,21 @@ body.editor-focus .ProseMirror .focus-dim {
   }
 }
 
+/* Public shared-document reading view: static render, nothing interactive */
+.public-doc {
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+.public-doc input[type='checkbox'] {
+  pointer-events: none;
+}
+.public-doc .doc-link {
+  cursor: default;
+}
+.public-doc .doc-link:hover {
+  background: #fff7ed;
+}
+
 /* Extra small devices */
 @media (max-width: 480px) {
   /* Document header metadata: hide presence + extra info */
