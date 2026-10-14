@@ -4,9 +4,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
-import { useState, useEffect } from 'react';
-import { showError } from '@/lib/toast';
-import { Plus, Users, Search, Sparkles, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { showError, showSuccess } from '@/lib/toast';
+import { Plus, Users, Search, Sparkles, ArrowRight, Zap, Shield, Globe, Upload, Loader2 } from 'lucide-react';
+import { convertFile, importErrorMessage } from '@/lib/importDoc';
 import { RecentDocuments } from '@/components/documents/RecentDocuments';
 import { StatsBar } from '@/components/landing/StatsBar';
 import { HowItWorks } from '@/components/landing/HowItWorks';
@@ -14,12 +15,13 @@ import { UseCases } from '@/components/landing/UseCases';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { FAQ } from '@/components/landing/FAQ';
 import { Footer } from '@/components/landing/Footer';
-import { AnimatedSection } from '@/components/landing/AnimatedSection';
 
 export default function HomePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
   const [typedText, setTypedText] = useState('');
   const fullText = 'together, in sync';
 
@@ -45,6 +47,27 @@ export default function HomePage() {
       showError('Failed to create document');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const importDocument = async (file: File | undefined) => {
+    if (!file || importing) return;
+    setImporting(true);
+    try {
+      const { json, title, skippedImages } = await convertFile(file);
+      const { data } = await axios.post('/api/documents', { title, content: json });
+      showSuccess(
+        skippedImages > 0
+          ? `Imported “${title}” (${skippedImages} oversized image${skippedImages === 1 ? '' : 's'} skipped)`
+          : `Imported “${title}”`
+      );
+      router.push(`/documents/${data.id}`);
+    } catch (err: any) {
+      const code = typeof err?.message === 'string' ? err.message : '';
+      showError(importErrorMessage(code));
+    } finally {
+      setImporting(false);
+      if (importRef.current) importRef.current.value = '';
     }
   };
 
@@ -76,9 +99,21 @@ export default function HomePage() {
         
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '60px' }}>
           {session ? (
-            <button onClick={createDocument} disabled={creating} className="btn btn-primary btn-lg">
-              <Plus size={20} /> {creating ? 'Creating...' : 'New Document'}
-            </button>
+            <>
+              <button onClick={createDocument} disabled={creating} className="btn btn-primary btn-lg">
+                <Plus size={20} /> {creating ? 'Creating...' : 'New Document'}
+              </button>
+              <button onClick={() => importRef.current?.click()} disabled={importing} className="btn btn-secondary btn-lg" title="Import Word, Markdown, HTML or text">
+                {importing ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />} {importing ? 'Importing...' : 'Import Document'}
+              </button>
+              <input
+                ref={importRef}
+                type="file"
+                accept=".docx,.md,.markdown,.txt,.html,.htm"
+                style={{ display: 'none' }}
+                onChange={(e) => importDocument(e.target.files?.[0])}
+              />
+            </>
           ) : (
             <>
               <Link href="/auth/register" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -98,7 +133,7 @@ export default function HomePage() {
       <FAQ />
 
       {/* Features Grid */}
-      <AnimatedSection>
+      <div>
         <section style={{ padding: '60px 24px', maxWidth: '1000px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px' }}>Everything you need</h2>
@@ -116,10 +151,10 @@ export default function HomePage() {
             ))}
           </div>
         </section>
-      </AnimatedSection>
+      </div>
 
       {/* CTA */}
-      <AnimatedSection>
+      <div>
         <section style={{ padding: '60px 24px', textAlign: 'center' }}>
           <div style={{ maxWidth: '550px', margin: '0 auto', background: 'linear-gradient(135deg, #f97316, #ea580c)', borderRadius: '24px', padding: '48px 32px', color: 'white' }}>
             <h2 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '10px' }}>Ready to collaborate?</h2>
@@ -129,7 +164,7 @@ export default function HomePage() {
             </Link>
           </div>
         </section>
-      </AnimatedSection>
+      </div>
       <Footer />
 
       <style>{`
