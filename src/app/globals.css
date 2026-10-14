@@ -930,6 +930,14 @@ body.editor-focus .ProseMirror .focus-dim {
   }
 }
 
+/* Top nav links: gray at rest, near-black on hover */
+.nav-link {
+  transition: color 0.15s ease;
+}
+.nav-link:hover {
+  color: #1c1917 !important;
+}
+
 /* Mid-width nav: collapse center links into the avatar menu before they can
    shove the bell/avatar off-screen (all links already live in that menu). */
 @media (max-width: 940px) {

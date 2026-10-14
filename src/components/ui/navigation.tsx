@@ -81,19 +81,19 @@ export function Navigation() {  const { data: session } = useSession();
           {session && (
             <>
               <span className="nav-hide-mid" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-                <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Link href="/dashboard" className="nav-link" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <LayoutDashboard size={15} />
                   Documents
                 </Link>
-                <Link href="/templates" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Link href="/templates" className="nav-link" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <LayoutTemplate size={15} />
                   Templates
                 </Link>
-                <button onClick={handleToday} disabled={openingToday} title="Open today's journal" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
+                <button onClick={handleToday} disabled={openingToday} title="Open today's journal" className="nav-link" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
                   {openingToday ? <Loader2 size={15} className="animate-spin" /> : <CalendarDays size={15} />}
                   Today
                 </button>
-                <Link href="/tasks" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Link href="/tasks" className="nav-link" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <CheckSquare size={15} />
                   Tasks
                   {openTasks > 0 && (
@@ -102,7 +102,7 @@ export function Navigation() {  const { data: session } = useSession();
                     </span>
                   )}
                 </Link>
-                <Link href="/graph" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Link href="/graph" className="nav-link" style={{ fontSize: '14px', fontWeight: 500, color: '#78716c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Network size={15} />
                   Graph
                 </Link>
