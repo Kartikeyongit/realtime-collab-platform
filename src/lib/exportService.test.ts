@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { ExportService } from './exportService';
+import { ExportService, flattenInlineNodes } from './exportService';
 
 describe('safeFilename', () => {
   it('strips illegal characters and trims', () => {
@@ -30,5 +30,29 @@ describe('withTaskMarkers', () => {
   it('leaves html without checkboxes untouched', () => {
     const html = '<p>plain <strong>text</strong></p>';
     expect(ExportService.withTaskMarkers(html)).toBe(html);
+  });
+});
+
+describe('flattenInlineNodes', () => {
+  const text = (t: string) => ({ type: 'text', text: t });
+  const para = (...content: any[]) => ({ type: 'paragraph', content });
+
+  it('flattens paragraph-wrapped text (bullet/task items keep their words)', () => {
+    const flat = flattenInlineNodes([para(text('In Scope')), para(text('Out of Scope'))]);
+    expect(flat.map((n) => n.text)).toEqual(['In Scope', 'Out of Scope']);
+  });
+
+  it('excludes nested block lists (converted separately, no double text)', () => {
+    const flat = flattenInlineNodes([
+      para(text('Parent')),
+      { type: 'bulletList', content: [{ type: 'listItem', content: [para(text('Child'))] }] },
+    ]);
+    expect(flat.map((n) => n.text)).toEqual(['Parent']);
+  });
+
+  it('keeps top-level inline nodes and handles garbage', () => {
+    expect(flattenInlineNodes([text('a'), { type: 'image', attrs: {} }])).toHaveLength(2);
+    expect(flattenInlineNodes(undefined)).toEqual([]);
+    expect(flattenInlineNodes(null as any)).toEqual([]);
   });
 });

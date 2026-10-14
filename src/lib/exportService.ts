@@ -13,6 +13,29 @@ interface TNode {
 
 type ParaChild = TextRun | ImageRun | ExternalHyperlink;
 
+/**
+ * Flatten one level of block containers (paragraphs inside list items /
+ * quotes) down to inline leaf nodes for DOCX runs. Nested block lists are
+ * excluded — their converters render them separately (avoids double text).
+ * Exported for unit tests.
+ */
+export function flattenInlineNodes(nodes: TNode[] | undefined): TNode[] {
+  if (!nodes) return [];
+  const out: TNode[] = [];
+  for (const n of nodes) {
+    if (!n) continue;
+    if (n.type === 'paragraph' && Array.isArray(n.content)) {
+      for (const c of n.content) {
+        if (!c) continue;
+        if (c.type === 'text' || c.type === 'image' || c.type === 'docLink') out.push(c);
+      }
+    } else if (n.type === 'text' || n.type === 'image' || n.type === 'docLink') {
+      out.push(n);
+    }
+  }
+  return out;
+}
+
 export class ExportService {
   // ── PDF — uses browser native print ──
   static toPDF(element: HTMLElement, _filename: string): Promise<void> {
@@ -170,10 +193,12 @@ export class ExportService {
   }
 
   // ── Build paragraph children (TextRun + inline ImageRun + ExternalHyperlink) ──
+  // List items/quotes wrap text in `paragraph` containers — flatten one level.
+  // Nested block lists are skipped here (callers convert them separately).
   private static async inline(nodes: TNode[] | undefined): Promise<ParaChild[]> {
     if (!nodes) return [];
     const out: ParaChild[] = [];
-    for (const n of nodes) {
+    for (const n of flattenInlineNodes(nodes)) {
       if (n.type === 'image') {
         out.push(await ExportService.imgRun(n));
       } else if (n.type === 'docLink') {
