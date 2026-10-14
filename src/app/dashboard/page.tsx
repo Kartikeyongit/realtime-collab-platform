@@ -13,6 +13,10 @@ import { AskWorkspace } from '@/components/ai/AskWorkspace';
 import { GuidedTour } from '@/components/onboarding/GuidedTour';
 import { TOUR_REPLAY_KEY, isTourDone } from '@/components/onboarding/tourSteps';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { MorningBriefing } from '@/components/dashboard/MorningBriefing';
+import { buildBriefing, briefingShownToday, markBriefingShown, readLastVisit, writeLastVisit, type Briefing } from '@/lib/briefing';
+import { suggestFolders, readDismissed, dismissSuggestion, type TidySuggestion } from '@/lib/organize';
+import { ArrowRight } from 'lucide-react';
 import { FilterSelect } from '@/components/ui/FilterSelect';
 import { MonthStrip } from '@/components/documents/MonthStrip';
 import { MarkdownImport } from '@/components/documents/MarkdownImport';
@@ -75,6 +79,8 @@ export default function DashboardPage() {
   const [folderTarget, setFolderTarget] = useState<{ id: string; name: string } | null>(null);
   const [askOpen, setAskOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [tidy, setTidy] = useState<TidySuggestion[]>([]);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const quickNoteRef = useRef<() => void>(() => {});
   const firstLoad = useRef(true);
@@ -174,6 +180,101 @@ export default function DashboardPage() {
     window.addEventListener('collabdocs-start-tour', startTour);
     return () => window.removeEventListener('collabdocs-start-tour', startTour);
   }, []);
+  // Morning briefing, once per calendar day. Gathers fresh counts, then shows.
+  useEffect(() => {
+    if (status !== 'authenticated' || initialLoading || briefingShownToday()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [docsRes, notifRes, tasksRes] = await Promise.all([
+          axios.get('/api/documents?limit=10&sort=updated'),
+          axios.get('/api/notifications'),
+          axios.get('/api/tasks'),
+        ]);
+        if (cancelled) return;
+        const recentDocs = (docsRes.data.documents || []).map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          updatedAt: d.updatedAt,
+        }));
+        const unread = ((notifRes.data.notifications || []).filter((n: any) => !n.read) as any[]).map((n) => ({
+          type: n.type || 'comment',
+          actorName: n.actor?.name ?? null,
+          documentTitle: n.documentTitle ?? null,
+          documentId: n.documentId ?? null,
+          createdAt: n.createdAt,
+        }));
+        const overdueCount = [
+          ...(tasksRes.data.buckets?.overdue || []),
+        ].length;
+        setBriefing(
+          buildBriefing({ now: new Date(), lastVisitIso: readLastVisit(), recentDocs, unread, overdueCount })
+        );
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, initialLoading]);
+  // Track last visit for tomorrow's briefing baseline.
+  useEffect(() => {
+    const write = () => writeLastVisit();
+    const onVis = () => {
+      if (document.hidden) write();
+    };
+    window.addEventListener('pagehide', write);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('pagehide', write);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+
+  // Tidy-up: suggest folders for Unsorted docs (suggest-only, never auto-moves).
+  useEffect(() => {
+    if (status !== 'authenticated' || initialLoading || folders.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await axios.get('/api/documents?limit=100&sort=updated');
+        if (cancelled) return;
+        const dismissed = readDismissed();
+        const all = (data.documents || []).map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          tags: (d.tags || []).map((t: any) => t.tag.name),
+          folderId: d.folder?.id || null,
+        }));
+        const unsorted = all.filter((d: any) => !d.folderId && !dismissed.has(d.id));
+        const suggestions = suggestFolders(
+          unsorted,
+          folders.map((f) => ({ id: f.id, name: f.name })),
+          all
+        ).filter((s) => !dismissed.has(s.documentId));
+        setTidy(suggestions);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, initialLoading, folders]);
+
+  const applyTidy = async (s: TidySuggestion) => {
+    try {
+      await axios.put(`/api/documents/${s.documentId}`, { folderId: s.folderId, skipVersion: true });
+      setTidy((prev) => prev.filter((x) => x.documentId !== s.documentId));
+      fetchDocuments();
+      fetchMeta();
+      showSuccess(`Moved to “${s.folderName}”`);
+    } catch {
+      showError('Failed to move document');
+    }
+  };
+
+  const dismissTidy = (s: TidySuggestion) => {
+    dismissSuggestion(s.documentId);
+    setTidy((prev) => prev.filter((x) => x.documentId !== s.documentId));
+  };
   // Overdue nudge, once per tab session ($0: no email/cron — in-app + browser only)
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -398,6 +499,47 @@ export default function DashboardPage() {
         <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>This month</div>
         <MonthStrip />
       </div>
+
+      {briefing && (
+        <MorningBriefing
+          briefing={briefing}
+          onOpenToday={openToday}
+          onOpenTasks={() => router.push('/tasks')}
+          onOpenDoc={(id) => router.push(`/documents/${id}`)}
+          onDismiss={() => {
+            markBriefingShown();
+            setBriefing(null);
+          }}
+        />
+      )}
+
+      {tidy.length > 0 && (
+        <div className="card" style={{ padding: '12px 16px', marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FolderIcon size={13} /> Tidy up — suggested homes ({tidy.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {tidy.map((s) => (
+              <div key={s.documentId} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fafaf9', border: '1.5px solid #f5f5f4', borderRadius: 10, padding: '7px 8px 7px 12px', flexWrap: 'wrap' }}>
+                <span style={{ flex: 1, minWidth: 140, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.title}
+                </span>
+                <ArrowRight size={13} color="#d6d3d1" style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: '#57534e', background: 'white', border: '1px solid #e7e5e4', borderRadius: 999, padding: '2px 10px', flexShrink: 0 }}>
+                  {s.folderName}
+                </span>
+                <span style={{ fontSize: 11, color: '#a8a29e', flexShrink: 0, flexBasis: '100%' }}>{s.reasons.join(' · ')}</span>
+                <span style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => applyTidy(s)} style={{ padding: '4px 12px', fontSize: 12 }}>Apply</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => dismissTidy(s)} style={{ padding: '4px 8px', fontSize: 12 }} title="Dismiss">
+                    <X size={13} />
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {barVisible && <div className="dash-shimmer" style={{ height: 3, borderRadius: 3, marginBottom: 12 }} />}
 

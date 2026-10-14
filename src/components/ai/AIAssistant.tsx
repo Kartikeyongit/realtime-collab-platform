@@ -29,12 +29,22 @@ const ACTIONS_PROMPT =
   'Return one per line, each starting with "- ". No numbering, no headers, no commentary. ' +
   'If there are none, return exactly: No action items found.';
 
+type Tone = 'formal' | 'casual' | 'confident' | 'concise';
+
+const TONES: Array<{ id: Tone; label: string; prompt: string }> = [
+  { id: 'formal', label: 'Formal', prompt: 'Rewrite it in a formal, professional tone suitable for business communication, preserving meaning' },
+  { id: 'casual', label: 'Casual', prompt: 'Rewrite it in a warm, casual, conversational tone, preserving meaning' },
+  { id: 'confident', label: 'Confident', prompt: 'Rewrite it in a confident, assertive tone — cut hedging and weak phrasing, preserving meaning' },
+  { id: 'concise', label: 'Concise', prompt: 'Rewrite it more concisely — cut filler and redundancy while preserving every key point' },
+];
+
 const selKey = new PluginKey('ai-selection');
 
 export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantProps) {
   const [prompt, setPrompt] = useState('');
   const [processing, setProcessing] = useState(false);
   const [mode, setMode] = useState<AIMode>('improve');
+  const [tone, setTone] = useState<Tone | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const pluginRef = useRef<Plugin | null>(null);
 
@@ -94,6 +104,7 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
     if (!isOpen) {
       setPrompt('');
       setMode('improve');
+      setTone(null);
       clearSelectionDecor();
     }
   }, [isOpen, clearSelectionDecor]);
@@ -107,7 +118,7 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
     const text = editor.state.doc.textBetween(from, to);
     if (!text) { addToast('Select text first', 'warning'); return; }
 
-    if (mode === 'custom' && !prompt.trim()) {
+    if (mode === 'custom' && !tone && !prompt.trim()) {
       addToast('Describe what you want', 'warning');
       return;
     }
@@ -116,13 +127,21 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
     abortRef.current = new AbortController();
     clearSelectionDecor();
 
+    // A picked tone overrides the mode via the custom-prompt path (same
+    // endpoint, same rate limits — no new API surface).
+    const tonePrompt = tone ? TONES.find((t) => t.id === tone)?.prompt : undefined;
+
     try {
       editor.chain().focus().deleteSelection().run();
 
       const response = await fetch('/api/ai/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, action: mode, prompt: mode === 'custom' ? prompt.trim() : undefined }),
+        body: JSON.stringify({
+          text,
+          action: tonePrompt ? 'custom' : mode,
+          prompt: tonePrompt ?? (mode === 'custom' ? prompt.trim() : undefined),
+        }),
         signal: abortRef.current.signal,
       });
 
@@ -269,13 +288,35 @@ export function AIAssistant({ editor, isOpen, onClose, addToast }: AIAssistantPr
         <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>Select text and choose an action</p>
       </div>
       <div style={{ padding: '16px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
           {modes.map((m) => (
             <button key={m.id} onClick={() => setMode(m.id)}
               style={{ padding: '8px 2px', border: '1.5px solid', borderColor: mode === m.id ? '#f97316' : '#e7e5e4', background: mode === m.id ? '#fff7ed' : 'white', color: mode === m.id ? '#f97316' : '#78716c', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, transition: 'all 0.15s ease' }}>
               <m.icon size={14} />{m.label}
             </button>
           ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '16px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tone</span>
+          {TONES.map((t) => {
+            const active = tone === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTone(active ? null : t.id)}
+                title={`${t.label} tone (applies to the action above)`}
+                style={{
+                  border: '1.5px solid', borderColor: active ? '#7c3aed' : '#e7e5e4',
+                  background: active ? '#f5f3ff' : 'white',
+                  color: active ? '#6d28d9' : '#78716c',
+                  borderRadius: 999, padding: '4px 11px', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 600, transition: 'all 0.15s ease',
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
         {mode === 'custom' && (
           <div style={{ fontSize: '11px', color: '#78716c', marginBottom: '8px', padding: '8px 10px', background: '#fafaf9', borderRadius: '8px', border: '1px solid #e7e5e4' }}>
