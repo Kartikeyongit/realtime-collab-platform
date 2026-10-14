@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 import axios from 'axios';
 import { showSuccess, showError } from '@/lib/toast';
-import { ArrowLeft, Save, Lock, User, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Lock, User, Trash2, AlertTriangle, Download, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 
@@ -22,6 +22,29 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleBackup = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const { data } = await axios.get('/api/backup');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collabdocs-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      showSuccess(`Backed up ${data.documentCount ?? 0} documents`);
+    } catch (err: any) {
+      showError(err?.response?.data?.error || 'Backup failed — try again in a minute');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     axios.get('/api/user/password').then(({ data }) => {
@@ -143,6 +166,20 @@ export default function SettingsPage() {
             </button>
           </>
         )}
+      </div>
+
+      <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+          <Download size={18} color="#f97316" />
+          <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Your data</h2>
+        </div>
+        <p style={{ fontSize: '13px', color: '#78716c', marginBottom: '16px', lineHeight: 1.5 }}>
+          Download everything you own — documents with content, folders, tags, workspaces, collaborators, comments and version history — as one JSON file. Yours to keep, no matter what.
+        </p>
+        <button onClick={handleBackup} disabled={exporting} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          {exporting ? 'Preparing backup…' : 'Download full backup'}
+        </button>
       </div>
 
       <div className="card" style={{ padding: '24px', border: '1.5px solid #fecaca' }}>

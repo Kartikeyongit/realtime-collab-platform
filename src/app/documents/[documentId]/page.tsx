@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/components/ui/Dialog';
 import { showSuccess, showError, showWarning, showInfo } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { WordCount } from '@/components/editor/WordCount';
+import { getWithRetry } from '@/lib/retryClient';
 import { 
   MessageSquare, Share2, ArrowLeft, 
   MoreHorizontal, Trash2, Copy,
@@ -101,7 +102,11 @@ export default function DocumentPage() {
     setError('');
     try {
       setIsLoading(true);
-      const response = await axios.get(`/api/documents/${documentId}`, { signal: abortRef.current.signal });
+      const response = await getWithRetry(`/api/documents/${documentId}`, { signal: abortRef.current.signal }, {
+        onRetry: (attempt) => {
+          if (attempt === 1) showInfo('Waking up the server — one moment…');
+        },
+      });
       setDocument(response.data);
       setTitle(response.data.title || 'Untitled');
       // Mark this doc's notifications read (fire-and-forget).

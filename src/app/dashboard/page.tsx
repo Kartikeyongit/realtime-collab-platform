@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FileText, Star, Pin, Folder as FolderIcon, Tag as TagIcon, Trash2, X, Search } from 'lucide-react';
-import { showSuccess, showError, showWarning } from '@/lib/toast';
+import { showSuccess, showError, showWarning, showInfo } from '@/lib/toast';
+import { getWithRetry } from '@/lib/retryClient';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { AskWorkspace } from '@/components/ai/AskWorkspace';
@@ -107,9 +108,9 @@ export default function DashboardPage() {
     try {
       const wsParam = workspaceFilter && workspaceFilter !== 'all' ? `?workspaceId=${workspaceFilter}` : '';
       const [f, t, w] = await Promise.all([
-        axios.get(`/api/folders${wsParam}`),
-        axios.get('/api/tags'),
-        axios.get('/api/workspaces'),
+        getWithRetry(`/api/folders${wsParam}`),
+        getWithRetry('/api/tags'),
+        getWithRetry('/api/workspaces'),
       ]);
       setFolders(f.data.folders || []);
       setTags(t.data.tags || []);
@@ -134,7 +135,11 @@ export default function DashboardPage() {
       if (tagFilter) params.set('tag', tagFilter);
       if (favOnly) params.set('favorite', '1');
       if (workspaceFilter && workspaceFilter !== 'all') params.set('workspaceId', workspaceFilter);
-      const { data } = await axios.get(`/api/documents?${params}`);
+      const { data } = await getWithRetry(`/api/documents?${params}`, undefined, {
+        onRetry: (attempt) => {
+          if (attempt === 1) showInfo('Waking up the server — one moment…');
+        },
+      });
       setDocuments(data.documents);
       setTotalPages(data.totalPages);
       setTotal(data.total);
