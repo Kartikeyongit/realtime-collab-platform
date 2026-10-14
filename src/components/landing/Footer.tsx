@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { FileText } from 'lucide-react';
+import { FileText, Github } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 
 export function Footer() {
@@ -50,17 +50,25 @@ export function Footer() {
           </div>
           <div style={{ borderTop: '1.5px solid #e7e5e4', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: 12, color: '#78716c' }}>&copy; {new Date().getFullYear()} CollabDocs. All rights reserved.</span>
-            <div style={{ display: 'flex', gap: 12 }}>
-              {['X', 'GitHub', 'Discord'].map((s) => (
-                <span key={s} className="footer-social" style={{ fontSize: 12, color: '#78716c', cursor: 'default' }}>{s}</span>
-              ))}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <a
+                href="https://github.com/Kartikeyongit/realtime-collab-platform"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="GitHub repository"
+                aria-label="GitHub repository"
+                style={{ display: 'inline-flex', padding: 6, borderRadius: 8, color: '#78716c' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#f97316'; e.currentTarget.style.background = '#fff7ed'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Github size={16} />
+              </a>
             </div>
           </div>
         </div>
       </AnimatedSection>
       <style>{`
         .footer-link:hover { color: #f97316 !important; }
-        .footer-social:hover { color: #f97316 !important; }
       `}</style>
     </footer>
   );
