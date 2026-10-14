@@ -19,7 +19,7 @@ import { suggestFolders, readDismissed, dismissSuggestion, type TidySuggestion }
 import { ArrowRight } from 'lucide-react';
 import { FilterSelect } from '@/components/ui/FilterSelect';
 import { MonthStrip } from '@/components/documents/MonthStrip';
-import { MarkdownImport } from '@/components/documents/MarkdownImport';
+import { DocumentImport } from '@/components/documents/DocumentImport';
 import { WorkspaceSwitcher, type Workspace } from '@/components/documents/WorkspaceSwitcher';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
@@ -490,7 +490,7 @@ export default function DashboardPage() {
         </h1>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={openToday} title="Open today's journal">Today</button>
         <button className="btn btn-secondary btn-sm dash-filter" onClick={quickNote} title="Capture a quick note (Alt+N)">+ Quick note</button>
-        <MarkdownImport />
+        <DocumentImport />
         <button className="btn btn-secondary btn-sm dash-filter" data-tour="ask" onClick={() => setAskOpen(true)} title="Ask across all your notes">✨ Ask</button>
         <button className="btn btn-secondary btn-sm" onClick={() => setPaletteOpen(true)} title="Command palette (Ctrl+K)">⌘K Search</button>
       </div>
